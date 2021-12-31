@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "mkcert": "mkdir -p cert && mkcert -cert-file ./cert/cert.pem -key-file ./cert/key.pem localhost $LOCAL_IP",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@react-three/drei": "^8.3.1",
+    "@types/node": "^17.0.5",
     "@types/react": "^17.0.33",
     "@types/react-dom": "^17.0.10",
     "@types/three": "0.131.0",
