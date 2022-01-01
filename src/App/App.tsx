@@ -14,7 +14,8 @@ function App() {
     </AppCanvas>
   );
 }
-function CanvasContent() {
+
+function useMoveByController() {
   const { player } = useXR();
   const leftController = useController("left");
   const rightController = useController("right");
@@ -25,15 +26,24 @@ function CanvasContent() {
       const [, , lx, ly] = leftController.inputSource.gamepad.axes;
       const [, , rx, ry] = rightController.inputSource.gamepad.axes;
 
-      const scale = 0.05;
-      // TODO: playerかcontrollerのtransformに基づいて移動する
-      player.position.x += lx * scale;
-      player.position.z += ly * scale;
+      const horizontalScale = 0.05;
+      const verticalScale = 0.02;
+      // 右手がx方向、正面がz方向なのでlxをxに、lyをzに
+      // 上がy方向で、右手スティックの上方向がマイナスなのでマイナスをかけてyに
+      const direction = new THREE.Vector3(
+        lx * horizontalScale,
+        -ry * verticalScale,
+        ly * horizontalScale
+      );
+      direction.applyEuler(player.rotation);
 
-      player.position.y -= ry * scale;
+      player.position.add(direction);
       player.rotation.y -= rx * 0.04;
     }
   });
+}
+function CanvasContent() {
+  useMoveByController();
   return (
     <>
       <axesHelper args={[5]} />
