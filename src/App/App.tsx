@@ -7,6 +7,7 @@ import { LoadVRM } from "../LoadVRM";
 import { useTurntable } from "./useTurntable";
 import { useController, useXR } from "@react-three/xr";
 import { useFrame } from "@react-three/fiber";
+import { Joint } from "../Joint";
 function App() {
   return (
     <AppCanvas>
@@ -52,10 +53,11 @@ function CanvasContent() {
         args={[0xffffff, 0.2]}
         position={new THREE.Vector3(1, 1, 1).normalize()}
       />
-      <OrbitControls />
+      <OrbitControls makeDefault />
       <Suspense fallback={<LoadingSpinner />}>
         <LoadVRM url="./models/three-vrm-girl.vrm" />
       </Suspense>
+      <Joint />
     </>
   );
 }
