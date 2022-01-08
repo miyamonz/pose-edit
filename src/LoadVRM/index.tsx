@@ -1,10 +1,25 @@
 import { useGLTF } from "@react-three/drei";
-import { VRM } from "@pixiv/three-vrm";
+import { VRM, VRMSchema } from "@pixiv/three-vrm";
 import usePromise from "react-promise-suspense";
+import { Joint } from "../Joint";
+
+function isNotNullish<T>(value: T): value is NonNullable<typeof value> {
+  return value !== null && value !== undefined;
+}
 
 export function LoadVRM({ url }: { url: string }) {
   const vrm = useVRM(url);
-  return <primitive object={vrm.scene} />;
+  const bones = Object.values(VRMSchema.HumanoidBoneName)
+    .map((name) => vrm.humanoid?.getBoneNode(name))
+    .filter(isNotNullish);
+  return (
+    <>
+      <primitive object={vrm.scene} />
+      {bones.map((bone) => (
+        <Joint key={bone.name} object={bone} />
+      ))}
+    </>
+  );
 }
 
 export function useVRM(url: string): VRM {

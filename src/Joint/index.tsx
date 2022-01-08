@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { Sphere, TransformControls } from "@react-three/drei";
+import { createPortal } from "@react-three/fiber";
+import { Object3D } from "three";
+import { atom, useAtom } from "jotai";
 
-// TODO: 外部オブジェクトに表示する方法を考える
-// 前はreact portal使ってたっけ
+const selectedAtom = atom("");
 
-// 関節操作に関しては、transform controlsのattachとdetachでobjectに繋げば良いはず
-
-export function Joint() {
+export function Joint({ object }: { object: Object3D }) {
   const [selected, setSelected] = useState(false);
+
+  const [selectedObjectId, setSelectedObjectId] = useAtom(selectedAtom);
+
+  const somthingSelected = selectedObjectId !== "";
+  if (somthingSelected && !selected) return null;
 
   return (
     <>
@@ -16,10 +21,22 @@ export function Joint() {
           mode="rotate"
           space="local"
           size={0.5}
-          onPointerMissed={() => setSelected(false)}
+          object={object}
+          onPointerMissed={() => {
+            setSelected(false);
+            setSelectedObjectId("");
+          }}
         />
       ) : (
-        <MySphere onClick={() => setSelected(true)} />
+        createPortal(
+          <MySphere
+            onClick={() => {
+              setSelected(true);
+              setSelectedObjectId(object.uuid);
+            }}
+          />,
+          object
+        )
       )}
     </>
   );

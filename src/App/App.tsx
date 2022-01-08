@@ -7,7 +7,6 @@ import { LoadVRM } from "../LoadVRM";
 import { useTurntable } from "./useTurntable";
 import { useController, useXR } from "@react-three/xr";
 import { useFrame } from "@react-three/fiber";
-import { Joint } from "../Joint";
 function App() {
   return (
     <AppCanvas>
@@ -57,7 +56,6 @@ function CanvasContent() {
       <Suspense fallback={<LoadingSpinner />}>
         <LoadVRM url="./models/three-vrm-girl.vrm" />
       </Suspense>
-      <Joint />
     </>
   );
 }
