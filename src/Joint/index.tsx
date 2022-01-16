@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Sphere, TransformControls } from "@react-three/drei";
+import { Sphere } from "@react-three/drei";
+import { TransformControls } from "../three-utils/TransformControls";
 import { createPortal } from "@react-three/fiber";
 import { Object3D } from "three";
 import { atom, useAtom } from "jotai";
