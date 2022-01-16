@@ -13,7 +13,7 @@ export function Joint({ object }: { object: Object3D }) {
   const [selectedObjectId, setSelectedObjectId] = useAtom(selectedAtom);
 
   const somthingSelected = selectedObjectId !== "";
-  if (somthingSelected && !selected) return null;
+  // if (somthingSelected && !selected) return null;
 
   return (
     <>
