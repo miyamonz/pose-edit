@@ -101,15 +101,90 @@ class OrbitControls extends EventDispatcher {
   // the target DOM element for key events
   _domElementKeyEvents: any = null;
 
-  getPolarAngle: () => number;
-  getAzimuthalAngle: () => number;
-  setPolarAngle: (x: number) => void;
-  setAzimuthalAngle: (x: number) => void;
-  getDistance: () => number;
+  spherical: Spherical;
+  sphericalDelta: Spherical;
 
-  listenToKeyEvents: (domElement: HTMLElement) => void;
-  saveState: () => void;
-  reset: () => void;
+  public getPolarAngle() {
+    return this.spherical.phi;
+  }
+  public getAzimuthalAngle() {
+    return this.spherical.theta;
+  }
+
+  public setPolarAngle(value: number) {
+    // use modulo wrapping to safeguard value
+    let phi = moduloWrapAround(value, 2 * Math.PI);
+    let currentPhi = this.spherical.phi;
+
+    // convert to the equivalent shortest angle
+    if (currentPhi < 0) currentPhi += 2 * Math.PI;
+    if (phi < 0) phi += 2 * Math.PI;
+    let phiDist = Math.abs(phi - currentPhi);
+    if (2 * Math.PI - phiDist < phiDist) {
+      if (phi < currentPhi) {
+        phi += 2 * Math.PI;
+      } else {
+        currentPhi += 2 * Math.PI;
+      }
+    }
+    this.sphericalDelta.phi = phi - currentPhi;
+    this.update();
+  }
+
+  public setAzimuthalAngle(value: number) {
+    // use modulo wrapping to safeguard value
+    let theta = moduloWrapAround(value, 2 * Math.PI);
+    let currentTheta = this.spherical.theta;
+
+    // convert to the equivalent shortest angle
+    if (currentTheta < 0) currentTheta += 2 * Math.PI;
+    if (theta < 0) theta += 2 * Math.PI;
+    let thetaDist = Math.abs(theta - currentTheta);
+    if (2 * Math.PI - thetaDist < thetaDist) {
+      if (theta < currentTheta) {
+        theta += 2 * Math.PI;
+      } else {
+        currentTheta += 2 * Math.PI;
+      }
+    }
+    this.sphericalDelta.theta = theta - currentTheta;
+    this.update();
+  }
+
+  public getDistance() {
+    return this.object.position.distanceTo(this.target);
+  }
+
+  private onKeyDown: (event: KeyboardEvent) => void;
+
+  public listenToKeyEvents(domElement: HTMLElement) {
+    domElement.addEventListener("keydown", this.onKeyDown);
+    this._domElementKeyEvents = domElement;
+  }
+
+  public saveState() {
+    this.target0.copy(this.target);
+    this.position0.copy(this.object.position);
+    this.zoom0 =
+      this.object instanceof PerspectiveCamera ? this.object.zoom : 1;
+  }
+  private state: number = STATE.NONE;
+
+  public reset() {
+    this.target.copy(this.target0);
+    this.object.position.copy(this.position0);
+    if (this.object instanceof PerspectiveCamera) {
+      this.object.zoom = this.zoom0;
+      this.object.updateProjectionMatrix();
+    }
+
+    this.dispatchEvent(changeEvent);
+
+    this.update();
+
+    this.state = STATE.NONE;
+  }
+
   update: () => void;
   connect: (domElement: HTMLElement) => void;
   dispose: () => void;
@@ -129,80 +204,6 @@ class OrbitControls extends EventDispatcher {
     //
     // public methods
     //
-
-    this.getPolarAngle = (): number => spherical.phi;
-
-    this.getAzimuthalAngle = (): number => spherical.theta;
-
-    this.setPolarAngle = (value: number): void => {
-      // use modulo wrapping to safeguard value
-      let phi = moduloWrapAround(value, 2 * Math.PI);
-      let currentPhi = spherical.phi;
-
-      // convert to the equivalent shortest angle
-      if (currentPhi < 0) currentPhi += 2 * Math.PI;
-      if (phi < 0) phi += 2 * Math.PI;
-      let phiDist = Math.abs(phi - currentPhi);
-      if (2 * Math.PI - phiDist < phiDist) {
-        if (phi < currentPhi) {
-          phi += 2 * Math.PI;
-        } else {
-          currentPhi += 2 * Math.PI;
-        }
-      }
-      sphericalDelta.phi = phi - currentPhi;
-      scope.update();
-    };
-
-    this.setAzimuthalAngle = (value: number): void => {
-      // use modulo wrapping to safeguard value
-      let theta = moduloWrapAround(value, 2 * Math.PI);
-      let currentTheta = spherical.theta;
-
-      // convert to the equivalent shortest angle
-      if (currentTheta < 0) currentTheta += 2 * Math.PI;
-      if (theta < 0) theta += 2 * Math.PI;
-      let thetaDist = Math.abs(theta - currentTheta);
-      if (2 * Math.PI - thetaDist < thetaDist) {
-        if (theta < currentTheta) {
-          theta += 2 * Math.PI;
-        } else {
-          currentTheta += 2 * Math.PI;
-        }
-      }
-      sphericalDelta.theta = theta - currentTheta;
-      scope.update();
-    };
-
-    this.getDistance = (): number =>
-      scope.object.position.distanceTo(scope.target);
-
-    this.listenToKeyEvents = (domElement: HTMLElement): void => {
-      domElement.addEventListener("keydown", onKeyDown);
-      this._domElementKeyEvents = domElement;
-    };
-
-    this.saveState = (): void => {
-      scope.target0.copy(scope.target);
-      scope.position0.copy(scope.object.position);
-      scope.zoom0 =
-        scope.object instanceof PerspectiveCamera ? scope.object.zoom : 1;
-    };
-
-    this.reset = (): void => {
-      scope.target.copy(scope.target0);
-      scope.object.position.copy(scope.position0);
-      if (scope.object instanceof PerspectiveCamera) {
-        scope.object.zoom = scope.zoom0;
-        scope.object.updateProjectionMatrix();
-      }
-
-      scope.dispatchEvent(changeEvent);
-
-      scope.update();
-
-      state = STATE.NONE;
-    };
 
     // this method is exposed, but perhaps it would be better if we can make it private...
     this.update = ((): (() => void) => {
@@ -231,7 +232,7 @@ class OrbitControls extends EventDispatcher {
         // angle from z-axis around y-axis
         spherical.setFromVector3(offset);
 
-        if (scope.autoRotate && state === STATE.NONE) {
+        if (scope.autoRotate && this.state === STATE.NONE) {
           rotateLeft(getAutoRotationAngle());
         }
 
@@ -373,12 +374,13 @@ class OrbitControls extends EventDispatcher {
     //
 
     const scope = this;
-    let state = STATE.NONE;
 
     // current position in spherical coordinates
     const spherical = new Spherical();
-    const sphericalDelta = new Spherical();
+    this.spherical = spherical;
 
+    const sphericalDelta = new Spherical();
+    this.sphericalDelta = sphericalDelta;
     let scale = 1;
     const panOffset = new Vector3();
     let zoomChanged = false;
@@ -910,7 +912,7 @@ class OrbitControls extends EventDispatcher {
       if (scope.enabled === false || scope.enablePan === false) return;
       handleKeyDown(event);
     }
-
+    this.onKeyDown = onKeyDown;
     function onTouchStart(event: PointerEvent) {
       trackPointer(event);
 
@@ -969,7 +971,7 @@ class OrbitControls extends EventDispatcher {
     function onTouchMove(event: PointerEvent) {
       trackPointer(event);
 
-      switch (state) {
+      switch (scope.state) {
         case STATE.TOUCH_ROTATE:
           if (scope.enableRotate === false) return;
           handleTouchMoveRotate(event);
@@ -996,7 +998,7 @@ class OrbitControls extends EventDispatcher {
           break;
 
         default:
-          state = STATE.NONE;
+          scope.state = STATE.NONE;
       }
     }
 
