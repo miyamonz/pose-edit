@@ -802,7 +802,7 @@ class OrbitControls extends EventDispatcher {
 
       scope.dispatchEvent(endEvent);
 
-      state = STATE.NONE;
+      scope.state = STATE.NONE;
     }
 
     function onPointerCancel(event: PointerEvent) {
@@ -833,18 +833,18 @@ class OrbitControls extends EventDispatcher {
         case MOUSE.DOLLY:
           if (scope.enableZoom === false) return;
           handleMouseDownDolly(event);
-          state = STATE.DOLLY;
+          scope.state = STATE.DOLLY;
           break;
 
         case MOUSE.ROTATE:
           if (event.ctrlKey || event.metaKey || event.shiftKey) {
             if (scope.enablePan === false) return;
             handleMouseDownPan(event);
-            state = STATE.PAN;
+            scope.state = STATE.PAN;
           } else {
             if (scope.enableRotate === false) return;
             handleMouseDownRotate(event);
-            state = STATE.ROTATE;
+            scope.state = STATE.ROTATE;
           }
           break;
 
@@ -852,19 +852,19 @@ class OrbitControls extends EventDispatcher {
           if (event.ctrlKey || event.metaKey || event.shiftKey) {
             if (scope.enableRotate === false) return;
             handleMouseDownRotate(event);
-            state = STATE.ROTATE;
+            scope.state = STATE.ROTATE;
           } else {
             if (scope.enablePan === false) return;
             handleMouseDownPan(event);
-            state = STATE.PAN;
+            scope.state = STATE.PAN;
           }
           break;
 
         default:
-          state = STATE.NONE;
+          scope.state = STATE.NONE;
       }
 
-      if (state !== STATE.NONE) {
+      if (scope.state !== STATE.NONE) {
         scope.dispatchEvent(startEvent);
       }
     }
@@ -872,7 +872,7 @@ class OrbitControls extends EventDispatcher {
     function onMouseMove(event: MouseEvent) {
       if (scope.enabled === false) return;
 
-      switch (state) {
+      switch (scope.state) {
         case STATE.ROTATE:
           if (scope.enableRotate === false) return;
           handleMouseMoveRotate(event);
@@ -891,6 +891,7 @@ class OrbitControls extends EventDispatcher {
     }
 
     function onMouseWheel(event: WheelEvent) {
+      const { state } = scope;
       if (
         scope.enabled === false ||
         scope.enableZoom === false ||
@@ -922,17 +923,17 @@ class OrbitControls extends EventDispatcher {
             case TOUCH.ROTATE:
               if (scope.enableRotate === false) return;
               handleTouchStartRotate();
-              state = STATE.TOUCH_ROTATE;
+              scope.state = STATE.TOUCH_ROTATE;
               break;
 
             case TOUCH.PAN:
               if (scope.enablePan === false) return;
               handleTouchStartPan();
-              state = STATE.TOUCH_PAN;
+              scope.state = STATE.TOUCH_PAN;
               break;
 
             default:
-              state = STATE.NONE;
+              scope.state = STATE.NONE;
           }
 
           break;
@@ -943,27 +944,27 @@ class OrbitControls extends EventDispatcher {
               if (scope.enableZoom === false && scope.enablePan === false)
                 return;
               handleTouchStartDollyPan();
-              state = STATE.TOUCH_DOLLY_PAN;
+              scope.state = STATE.TOUCH_DOLLY_PAN;
               break;
 
             case TOUCH.DOLLY_ROTATE:
               if (scope.enableZoom === false && scope.enableRotate === false)
                 return;
               handleTouchStartDollyRotate();
-              state = STATE.TOUCH_DOLLY_ROTATE;
+              scope.state = STATE.TOUCH_DOLLY_ROTATE;
               break;
 
             default:
-              state = STATE.NONE;
+              scope.state = STATE.NONE;
           }
 
           break;
 
         default:
-          state = STATE.NONE;
+          scope.state = STATE.NONE;
       }
 
-      if (state !== STATE.NONE) {
+      if (scope.state !== STATE.NONE) {
         scope.dispatchEvent(startEvent);
       }
     }
