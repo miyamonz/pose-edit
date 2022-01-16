@@ -95,14 +95,18 @@ class OrbitControls extends EventDispatcher {
   };
   // Touch fingers
   touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN };
-  target0: Vector3;
+  target0 = this.target.clone();
+
   position0: Vector3;
   zoom0: number;
   // the target DOM element for key events
   _domElementKeyEvents: any = null;
 
-  spherical: Spherical;
-  sphericalDelta: Spherical;
+  spherical = new Spherical();
+  sphericalDelta = new Spherical();
+
+  scale = 1;
+  zoomChanged = false;
 
   public getPolarAngle() {
     return this.spherical.phi;
@@ -196,7 +200,6 @@ class OrbitControls extends EventDispatcher {
     this.domElement = domElement;
 
     // for reset
-    this.target0 = this.target.clone();
     this.position0 = this.object.position.clone();
     this.zoom0 =
       this.object instanceof PerspectiveCamera ? this.object.zoom : 1;
@@ -222,6 +225,7 @@ class OrbitControls extends EventDispatcher {
       const twoPI = 2 * Math.PI;
 
       return function update(): boolean {
+        const { spherical, sphericalDelta, scale } = scope;
         const position = scope.object.position;
 
         offset.copy(position).sub(scope.target);
@@ -308,14 +312,14 @@ class OrbitControls extends EventDispatcher {
           panOffset.set(0, 0, 0);
         }
 
-        scale = 1;
+        scope.scale = 1;
 
         // update condition is:
         // min(camera displacement, camera rotation in radians)^2 > EPS
         // using small-angle approximation cos(x/2) = 1 - x^2 / 8
 
         if (
-          zoomChanged ||
+          scope.zoomChanged ||
           lastPosition.distanceToSquared(scope.object.position) > EPS ||
           8 * (1 - lastQuaternion.dot(scope.object.quaternion)) > EPS
         ) {
@@ -323,7 +327,7 @@ class OrbitControls extends EventDispatcher {
 
           lastPosition.copy(scope.object.position);
           lastQuaternion.copy(scope.object.quaternion);
-          zoomChanged = false;
+          scope.zoomChanged = false;
 
           return true;
         }
@@ -375,15 +379,7 @@ class OrbitControls extends EventDispatcher {
 
     const scope = this;
 
-    // current position in spherical coordinates
-    const spherical = new Spherical();
-    this.spherical = spherical;
-
-    const sphericalDelta = new Spherical();
-    this.sphericalDelta = sphericalDelta;
-    let scale = 1;
     const panOffset = new Vector3();
-    let zoomChanged = false;
 
     const rotateStart = new Vector2();
     const rotateEnd = new Vector2();
@@ -409,11 +405,11 @@ class OrbitControls extends EventDispatcher {
     }
 
     function rotateLeft(angle: number): void {
-      sphericalDelta.theta -= angle;
+      this.sphericalDelta.theta -= angle;
     }
 
     function rotateUp(angle: number): void {
-      sphericalDelta.phi -= angle;
+      this.sphericalDelta.phi -= angle;
     }
 
     const panLeft = (() => {
@@ -508,7 +504,7 @@ class OrbitControls extends EventDispatcher {
         scope.object instanceof PerspectiveCamera &&
         scope.object.isPerspectiveCamera
       ) {
-        scale /= dollyScale;
+        scope.scale /= dollyScale;
       } else if (
         scope.object instanceof OrthographicCamera &&
         scope.object.isOrthographicCamera
@@ -518,7 +514,7 @@ class OrbitControls extends EventDispatcher {
           Math.min(scope.maxZoom, scope.object.zoom * dollyScale)
         );
         scope.object.updateProjectionMatrix();
-        zoomChanged = true;
+        scope.zoomChanged = true;
       } else {
         console.warn(
           "WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled."
@@ -532,7 +528,7 @@ class OrbitControls extends EventDispatcher {
         scope.object instanceof PerspectiveCamera &&
         scope.object.isPerspectiveCamera
       ) {
-        scale *= dollyScale;
+        scope.scale *= dollyScale;
       } else if (
         scope.object instanceof OrthographicCamera &&
         scope.object.isOrthographicCamera
@@ -542,7 +538,7 @@ class OrbitControls extends EventDispatcher {
           Math.min(scope.maxZoom, scope.object.zoom / dollyScale)
         );
         scope.object.updateProjectionMatrix();
-        zoomChanged = true;
+        scope.zoomChanged = true;
       } else {
         console.warn(
           "WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled."
