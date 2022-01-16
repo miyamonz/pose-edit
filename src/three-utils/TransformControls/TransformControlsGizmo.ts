@@ -8,6 +8,8 @@ import {
   Quaternion,
   Vector3,
 } from "three";
+
+// TODO: every TransformControlsGizmo share same material
 import { helperTranslate } from "./gizmoMaterial";
 import { helperScale } from "./gizmoMaterial";
 import { helperRotate } from "./gizmoMaterial";
@@ -159,10 +161,11 @@ export class TransformControlsGizmo extends Object3D {
     this.helper["rotate"].visible = this.mode === "rotate";
     this.helper["scale"].visible = this.mode === "scale";
 
-    let handles: Array<Object3D & { tag?: string }> = [];
-    handles = handles.concat(this.picker[this.mode].children);
-    handles = handles.concat(this.gizmo[this.mode].children);
-    handles = handles.concat(this.helper[this.mode].children);
+    let handles: Array<Object3D & { tag?: string }> = [
+      ...this.picker[this.mode].children,
+      ...this.gizmo[this.mode].children,
+      ...this.helper[this.mode].children,
+    ];
 
     for (let i = 0; i < handles.length; i++) {
       const handle = handles[i];
@@ -505,16 +508,12 @@ export class TransformControlsGizmo extends Object3D {
       }
 
       // Hide disabled axes
-      handle.visible =
-        handle.visible && (handle.name.indexOf("X") === -1 || this.showX);
-      handle.visible =
-        handle.visible && (handle.name.indexOf("Y") === -1 || this.showY);
-      handle.visible =
-        handle.visible && (handle.name.indexOf("Z") === -1 || this.showZ);
-      handle.visible =
-        handle.visible &&
-        (handle.name.indexOf("E") === -1 ||
-          (this.showX && this.showY && this.showZ));
+      handle.visible &&= handle.name.indexOf("X") === -1 || this.showX;
+      handle.visible &&= handle.name.indexOf("Y") === -1 || this.showY;
+      handle.visible &&= handle.name.indexOf("Z") === -1 || this.showZ;
+      handle.visible &&=
+        handle.name.indexOf("E") === -1 ||
+        (this.showX && this.showY && this.showZ);
 
       // highlight selected axis
       //@ts-ignore
