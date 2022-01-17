@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import * as THREE from "three";
-import { Octahedron, OrbitControls } from "@react-three/drei";
+import { Octahedron } from "@react-three/drei";
 import { AppCanvas } from "../AppCanvas";
 import { LoadVRM } from "../LoadVRM";
 
 import { useTurntable } from "./useTurntable";
 import { useController, useXR } from "@react-three/xr";
 import { useFrame } from "@react-three/fiber";
+
+import { OrbitControls } from "../three-utils/OrbitControls";
 function App() {
   return (
     <AppCanvas>

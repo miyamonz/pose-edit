@@ -405,11 +405,11 @@ class OrbitControls extends EventDispatcher {
     }
 
     function rotateLeft(angle: number): void {
-      this.sphericalDelta.theta -= angle;
+      scope.sphericalDelta.theta -= angle;
     }
 
     function rotateUp(angle: number): void {
-      this.sphericalDelta.phi -= angle;
+      scope.sphericalDelta.phi -= angle;
     }
 
     const panLeft = (() => {
