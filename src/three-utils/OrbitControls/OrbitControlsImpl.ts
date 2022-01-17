@@ -49,13 +49,16 @@ class OrbitControls extends EventDispatcher {
   // How far you can dolly in and out ( PerspectiveCamera only )
   minDistance = 0;
   maxDistance = Infinity;
+
   // How far you can zoom in and out ( OrthographicCamera only )
   minZoom = 0;
   maxZoom = Infinity;
+
   // How far you can orbit vertically, upper and lower limits.
   // Range is 0 to Math.PI radians.
   minPolarAngle = 0; // radians
   maxPolarAngle = Math.PI; // radians
+
   // How far you can orbit horizontally, upper and lower limits.
   // If set, the interval [ min, max ] must be a sub-interval of [ - 2 PI, 2 PI ], with ( max - min < 2 PI )
   minAzimuthAngle = -Infinity; // radians
@@ -64,13 +67,7 @@ class OrbitControls extends EventDispatcher {
   // If damping is enabled, you must call controls.update() in your animation loop
   enableDamping = false;
   dampingFactor = 0.05;
-  // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
-  // Set to false to disable zooming
-  enableZoom = true;
-  zoomSpeed = 1.0;
-  // Set to false to disable rotating
-  enableRotate = true;
-  rotateSpeed = 1.0;
+
   // Set to false to disable panning
   enablePan = true;
   panSpeed = 1.0;
@@ -106,7 +103,6 @@ class OrbitControls extends EventDispatcher {
   sphericalDelta = new Spherical();
 
   scale = 1;
-  zoomChanged = false;
 
   public getPolarAngle() {
     return this.spherical.phi;
@@ -225,30 +221,15 @@ class OrbitControls extends EventDispatcher {
   };
 
   //internal
-  panOffset = new Vector3();
 
+  // rotate
+
+  // Set to false to disable rotating
+  enableRotate = true;
+  rotateSpeed = 1.0;
   rotateStart = new Vector2();
   rotateEnd = new Vector2();
   rotateDelta = new Vector2();
-
-  panStart = new Vector2();
-  panEnd = new Vector2();
-  panDelta = new Vector2();
-
-  dollyStart = new Vector2();
-  dollyEnd = new Vector2();
-  dollyDelta = new Vector2();
-
-  pointers: PointerEvent[] = [];
-  pointerPositions: { [key: string]: Vector2 } = {};
-
-  getAutoRotationAngle(): number {
-    return ((2 * Math.PI) / 60 / 60) * this.autoRotateSpeed;
-  }
-
-  getZoomScale(): number {
-    return Math.pow(0.95, this.zoomSpeed);
-  }
 
   rotateLeft(angle: number): void {
     this.sphericalDelta.theta -= angle;
@@ -257,6 +238,13 @@ class OrbitControls extends EventDispatcher {
   rotateUp(angle: number): void {
     this.sphericalDelta.phi -= angle;
   }
+
+  // pan
+  panOffset = new Vector3();
+
+  panStart = new Vector2();
+  panEnd = new Vector2();
+  panDelta = new Vector2();
 
   panLeft = (() => {
     const v = new Vector3();
@@ -341,6 +329,20 @@ class OrbitControls extends EventDispatcher {
       }
     };
   })();
+
+  // dolly
+  zoomChanged = false;
+  // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
+  // Set to false to disable zooming
+  enableZoom = true;
+  zoomSpeed = 1.0;
+  getZoomScale(): number {
+    return Math.pow(0.95, this.zoomSpeed);
+  }
+
+  dollyStart = new Vector2();
+  dollyEnd = new Vector2();
+  dollyDelta = new Vector2();
 
   dollyOut(dollyScale: number) {
     if (
@@ -489,6 +491,8 @@ class OrbitControls extends EventDispatcher {
       this.update();
     }
   };
+
+  pointers: PointerEvent[] = [];
 
   handleTouchStartRotate = () => {
     if (this.pointers.length == 1) {
@@ -753,9 +757,7 @@ class OrbitControls extends EventDispatcher {
     event.preventDefault();
 
     this.dispatchEvent(startEvent);
-
     this.handleMouseWheel(event);
-
     this.dispatchEvent(endEvent);
   };
 
@@ -859,6 +861,8 @@ class OrbitControls extends EventDispatcher {
     this.pointers.push(event);
   };
 
+  pointerPositions: { [key: string]: Vector2 } = {};
+
   removePointer(event: PointerEvent) {
     delete this.pointerPositions[event.pointerId];
 
@@ -887,6 +891,12 @@ class OrbitControls extends EventDispatcher {
         ? this.pointers[1]
         : this.pointers[0];
     return this.pointerPositions[pointer.pointerId];
+  }
+
+  // update
+
+  getAutoRotationAngle(): number {
+    return ((2 * Math.PI) / 60 / 60) * this.autoRotateSpeed;
   }
 
   update: () => void;
