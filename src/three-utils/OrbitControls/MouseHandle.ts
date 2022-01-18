@@ -23,6 +23,9 @@ function getMouseActionFromButton(
 
 export class MouseHandle {
   control: OrbitControls;
+  get dolly() {
+    return this.control.dolly;
+  }
   constructor(control: OrbitControls) {
     this.control = control;
   }
@@ -102,7 +105,7 @@ export class MouseHandle {
   };
 
   handleMouseDownDolly(event: MouseEvent) {
-    this.control.dollyStart.set(event.clientX, event.clientY);
+    this.dolly.dollyStart.set(event.clientX, event.clientY);
   }
 
   handleMouseDownPan = (event: MouseEvent) => {
@@ -130,19 +133,19 @@ export class MouseHandle {
   };
 
   handleMouseMoveDolly = (event: MouseEvent) => {
-    this.control.dollyEnd.set(event.clientX, event.clientY);
-    this.control.dollyDelta.subVectors(
-      this.control.dollyEnd,
-      this.control.dollyStart
+    this.dolly.dollyEnd.set(event.clientX, event.clientY);
+    this.dolly.dollyDelta.subVectors(
+      this.dolly.dollyEnd,
+      this.dolly.dollyStart
     );
 
-    if (this.control.dollyDelta.y > 0) {
-      this.control.dollyOut(this.control.getZoomScale());
-    } else if (this.control.dollyDelta.y < 0) {
-      this.control.dollyIn(this.control.getZoomScale());
+    if (this.dolly.dollyDelta.y > 0) {
+      this.dolly.dollyOut(this.control.getZoomScale());
+    } else if (this.dolly.dollyDelta.y < 0) {
+      this.dolly.dollyIn(this.control.getZoomScale());
     }
 
-    this.control.dollyStart.copy(this.control.dollyEnd);
+    this.dolly.dollyStart.copy(this.dolly.dollyEnd);
     this.control.update();
   };
 

@@ -11,6 +11,7 @@ import {
   Vector2,
   Vector3,
 } from "three";
+import { Dolly } from "./Dolly";
 import { MouseHandle } from "./MouseHandle";
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
@@ -50,10 +51,6 @@ class OrbitControls extends EventDispatcher {
   // How far you can dolly in and out ( PerspectiveCamera only )
   minDistance = 0;
   maxDistance = Infinity;
-
-  // How far you can zoom in and out ( OrthographicCamera only )
-  minZoom = 0;
-  maxZoom = Infinity;
 
   // How far you can orbit vertically, upper and lower limits.
   // Range is 0 to Math.PI radians.
@@ -341,63 +338,11 @@ class OrbitControls extends EventDispatcher {
     return Math.pow(0.95, this.zoomSpeed);
   }
 
-  dollyStart = new Vector2();
-  dollyEnd = new Vector2();
-  dollyDelta = new Vector2();
-
-  dollyOut(dollyScale: number) {
-    if (
-      this.object instanceof PerspectiveCamera &&
-      this.object.isPerspectiveCamera
-    ) {
-      this.scale /= dollyScale;
-    } else if (
-      this.object instanceof OrthographicCamera &&
-      this.object.isOrthographicCamera
-    ) {
-      this.object.zoom = Math.max(
-        this.minZoom,
-        Math.min(this.maxZoom, this.object.zoom * dollyScale)
-      );
-      this.object.updateProjectionMatrix();
-      this.zoomChanged = true;
-    } else {
-      console.warn(
-        "WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled."
-      );
-      this.enableZoom = false;
-    }
-  }
-
-  dollyIn(dollyScale: number) {
-    if (
-      this.object instanceof PerspectiveCamera &&
-      this.object.isPerspectiveCamera
-    ) {
-      this.scale *= dollyScale;
-    } else if (
-      this.object instanceof OrthographicCamera &&
-      this.object.isOrthographicCamera
-    ) {
-      this.object.zoom = Math.max(
-        this.minZoom,
-        Math.min(this.maxZoom, this.object.zoom / dollyScale)
-      );
-      this.object.updateProjectionMatrix();
-      this.zoomChanged = true;
-    } else {
-      console.warn(
-        "WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled."
-      );
-      this.enableZoom = false;
-    }
-  }
-
   handleMouseWheel = (event: WheelEvent) => {
     if (event.deltaY < 0) {
-      this.dollyIn(this.getZoomScale());
+      this.dolly.dollyIn(this.getZoomScale());
     } else if (event.deltaY > 0) {
-      this.dollyOut(this.getZoomScale());
+      this.dolly.dollyOut(this.getZoomScale());
     }
 
     this.update();
@@ -464,7 +409,7 @@ class OrbitControls extends EventDispatcher {
     const dy = this.pointers[0].pageY - this.pointers[1].pageY;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    this.dollyStart.set(0, distance);
+    this.dolly.dollyStart.set(0, distance);
   };
 
   handleTouchStartDollyPan = () => {
@@ -525,13 +470,13 @@ class OrbitControls extends EventDispatcher {
     const dy = event.pageY - position.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    this.dollyEnd.set(0, distance);
-    this.dollyDelta.set(
+    this.dolly.dollyEnd.set(0, distance);
+    this.dolly.dollyDelta.set(
       0,
-      Math.pow(this.dollyEnd.y / this.dollyStart.y, this.zoomSpeed)
+      Math.pow(this.dolly.dollyEnd.y / this.dolly.dollyStart.y, this.zoomSpeed)
     );
-    this.dollyOut(this.dollyDelta.y);
-    this.dollyStart.copy(this.dollyEnd);
+    this.dolly.dollyOut(this.dolly.dollyDelta.y);
+    this.dolly.dollyStart.copy(this.dolly.dollyEnd);
   };
 
   handleTouchMoveDollyPan = (event: PointerEvent) => {
@@ -763,6 +708,7 @@ class OrbitControls extends EventDispatcher {
 
   update: () => void;
   mouseHandle: MouseHandle;
+  dolly: Dolly;
   constructor(object: Camera, domElement?: HTMLElement) {
     super();
 
@@ -905,6 +851,7 @@ class OrbitControls extends EventDispatcher {
     if (domElement !== undefined) this.connect(domElement);
 
     this.mouseHandle = new MouseHandle(this);
+    this.dolly = new Dolly(this);
     // force an update at start
     this.update();
   }
