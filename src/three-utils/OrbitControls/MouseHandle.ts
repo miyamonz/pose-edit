@@ -26,6 +26,9 @@ export class MouseHandle {
   get dolly() {
     return this.control.dolly;
   }
+  get rotate() {
+    return this.control.rotate;
+  }
   constructor(control: OrbitControls) {
     this.control = control;
   }
@@ -37,7 +40,7 @@ export class MouseHandle {
 
     switch (mouseAction) {
       case MOUSE.DOLLY:
-        if (this.control.enableZoom === false) return;
+        if (this.dolly.enableZoom === false) return;
         this.handleMouseDownDolly(event);
         this.control.state = STATE.DOLLY;
         break;
@@ -48,7 +51,7 @@ export class MouseHandle {
           this.handleMouseDownPan(event);
           this.control.state = STATE.PAN;
         } else {
-          if (this.control.enableRotate === false) return;
+          if (this.rotate.enableRotate === false) return;
           this.handleMouseDownRotate(event);
           this.control.state = STATE.ROTATE;
         }
@@ -56,7 +59,7 @@ export class MouseHandle {
 
       case MOUSE.PAN:
         if (event.ctrlKey || event.metaKey || event.shiftKey) {
-          if (this.control.enableRotate === false) return;
+          if (this.rotate.enableRotate === false) return;
           this.handleMouseDownRotate(event);
           this.control.state = STATE.ROTATE;
         } else {
@@ -80,12 +83,12 @@ export class MouseHandle {
 
     switch (this.control.state) {
       case STATE.ROTATE:
-        if (this.control.enableRotate === false) return;
+        if (this.rotate.enableRotate === false) return;
         this.handleMouseMoveRotate(event);
         break;
 
       case STATE.DOLLY:
-        if (this.control.enableZoom === false) return;
+        if (this.dolly.enableZoom === false) return;
         this.handleMouseMoveDolly(event);
         break;
 
@@ -101,7 +104,7 @@ export class MouseHandle {
   //
 
   handleMouseDownRotate = (event: MouseEvent) => {
-    this.control.rotateStart.set(event.clientX, event.clientY);
+    this.rotate.rotateStart.set(event.clientX, event.clientY);
   };
 
   handleMouseDownDolly(event: MouseEvent) {
@@ -113,39 +116,21 @@ export class MouseHandle {
   };
 
   handleMouseMoveRotate = (event: MouseEvent) => {
-    this.control.rotateEnd.set(event.clientX, event.clientY);
-    this.control.rotateDelta
-      .subVectors(this.control.rotateEnd, this.control.rotateStart)
-      .multiplyScalar(this.control.rotateSpeed);
+    this.rotate.rotateEnd.set(event.clientX, event.clientY);
+
+    this.rotate.multiplyDelta();
 
     const element = this.control.domElement;
 
     if (element) {
-      this.control.rotateLeft(
-        (2 * Math.PI * this.control.rotateDelta.x) / element.clientHeight
-      ); // yes, height
-      this.control.rotateUp(
-        (2 * Math.PI * this.control.rotateDelta.y) / element.clientHeight
-      );
+      this.rotate.rotateRelativeToElementHeight(element.clientHeight);
     }
-    this.control.rotateStart.copy(this.control.rotateEnd);
+    this.rotate.copyEndToStart();
     this.control.update();
   };
 
   handleMouseMoveDolly = (event: MouseEvent) => {
-    this.dolly.dollyEnd.set(event.clientX, event.clientY);
-    this.dolly.dollyDelta.subVectors(
-      this.dolly.dollyEnd,
-      this.dolly.dollyStart
-    );
-
-    if (this.dolly.dollyDelta.y > 0) {
-      this.dolly.dollyOut(this.control.getZoomScale());
-    } else if (this.dolly.dollyDelta.y < 0) {
-      this.dolly.dollyIn(this.control.getZoomScale());
-    }
-
-    this.dolly.dollyStart.copy(this.dolly.dollyEnd);
+    this.dolly.handleMove(event.clientX, event.clientY);
     this.control.update();
   };
 

@@ -12,6 +12,7 @@ import {
   Vector3,
 } from "three";
 import { Dolly } from "./Dolly";
+import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
@@ -72,9 +73,6 @@ class OrbitControls extends EventDispatcher {
   screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
   keyPanSpeed = 7.0; // pixels moved per arrow key push
   // Set to true to automatically rotate around the target
-  // If auto-rotate is enabled, you must call controls.update() in your animation loop
-  autoRotate = false;
-  autoRotateSpeed = 2.0; // 30 seconds per orbit when fps is 60
   // The four arrow keys
   keys = {
     LEFT: "ArrowLeft",
@@ -220,22 +218,7 @@ class OrbitControls extends EventDispatcher {
 
   //internal
 
-  // rotate
-
   // Set to false to disable rotating
-  enableRotate = true;
-  rotateSpeed = 1.0;
-  rotateStart = new Vector2();
-  rotateEnd = new Vector2();
-  rotateDelta = new Vector2();
-
-  rotateLeft(angle: number): void {
-    this.sphericalDelta.theta -= angle;
-  }
-
-  rotateUp(angle: number): void {
-    this.sphericalDelta.phi -= angle;
-  }
 
   // pan
   panOffset = new Vector3();
@@ -329,24 +312,6 @@ class OrbitControls extends EventDispatcher {
   })();
 
   // dolly
-  zoomChanged = false;
-  // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
-  // Set to false to disable zooming
-  enableZoom = true;
-  zoomSpeed = 1.0;
-  getZoomScale(): number {
-    return Math.pow(0.95, this.zoomSpeed);
-  }
-
-  handleMouseWheel = (event: WheelEvent) => {
-    if (event.deltaY < 0) {
-      this.dolly.dollyIn(this.getZoomScale());
-    } else if (event.deltaY > 0) {
-      this.dolly.dollyOut(this.getZoomScale());
-    }
-
-    this.update();
-  };
 
   handleKeyDown = (event: KeyboardEvent) => {
     let needsUpdate = false;
@@ -382,17 +347,6 @@ class OrbitControls extends EventDispatcher {
 
   pointers: PointerEvent[] = [];
 
-  handleTouchStartRotate = () => {
-    if (this.pointers.length == 1) {
-      this.rotateStart.set(this.pointers[0].pageX, this.pointers[0].pageY);
-    } else {
-      const x = 0.5 * (this.pointers[0].pageX + this.pointers[1].pageX);
-      const y = 0.5 * (this.pointers[0].pageY + this.pointers[1].pageY);
-
-      this.rotateStart.set(x, y);
-    }
-  };
-
   handleTouchStartPan = () => {
     if (this.pointers.length == 1) {
       this.panStart.set(this.pointers[0].pageX, this.pointers[0].pageY);
@@ -404,47 +358,14 @@ class OrbitControls extends EventDispatcher {
     }
   };
 
-  handleTouchStartDolly = () => {
-    const dx = this.pointers[0].pageX - this.pointers[1].pageX;
-    const dy = this.pointers[0].pageY - this.pointers[1].pageY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    this.dolly.dollyStart.set(0, distance);
-  };
-
   handleTouchStartDollyPan = () => {
-    if (this.enableZoom) this.handleTouchStartDolly();
+    this.dolly.handleTouchStartDolly(this.pointers);
     if (this.enablePan) this.handleTouchStartPan();
   };
 
   handleTouchStartDollyRotate = () => {
-    if (this.enableZoom) this.handleTouchStartDolly();
-    if (this.enableRotate) this.handleTouchStartRotate();
-  };
-
-  handleTouchMoveRotate = (event: PointerEvent) => {
-    if (this.pointers.length == 1) {
-      this.rotateEnd.set(event.pageX, event.pageY);
-    } else {
-      const position = this.getSecondPointerPosition(event);
-      const x = 0.5 * (event.pageX + position.x);
-      const y = 0.5 * (event.pageY + position.y);
-      this.rotateEnd.set(x, y);
-    }
-
-    this.rotateDelta
-      .subVectors(this.rotateEnd, this.rotateStart)
-      .multiplyScalar(this.rotateSpeed);
-
-    const element = this.domElement;
-
-    if (element) {
-      this.rotateLeft(
-        (2 * Math.PI * this.rotateDelta.x) / element.clientHeight
-      ); // yes, height
-      this.rotateUp((2 * Math.PI * this.rotateDelta.y) / element.clientHeight);
-    }
-    this.rotateStart.copy(this.rotateEnd);
+    this.dolly.handleTouchStartDolly(this.pointers);
+    this.rotate.handleTouchStartRotate(this.pointers);
   };
 
   handleTouchMovePan = (event: PointerEvent) => {
@@ -464,29 +385,14 @@ class OrbitControls extends EventDispatcher {
     this.panStart.copy(this.panEnd);
   };
 
-  handleTouchMoveDolly = (event: PointerEvent) => {
-    const position = this.getSecondPointerPosition(event);
-    const dx = event.pageX - position.x;
-    const dy = event.pageY - position.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    this.dolly.dollyEnd.set(0, distance);
-    this.dolly.dollyDelta.set(
-      0,
-      Math.pow(this.dolly.dollyEnd.y / this.dolly.dollyStart.y, this.zoomSpeed)
-    );
-    this.dolly.dollyOut(this.dolly.dollyDelta.y);
-    this.dolly.dollyStart.copy(this.dolly.dollyEnd);
-  };
-
   handleTouchMoveDollyPan = (event: PointerEvent) => {
-    if (this.enableZoom) this.handleTouchMoveDolly(event);
+    this.dolly.handleTouchMoveDolly(event);
     if (this.enablePan) this.handleTouchMovePan(event);
   };
 
   handleTouchMoveDollyRotate = (event: PointerEvent) => {
-    if (this.enableZoom) this.handleTouchMoveDolly(event);
-    if (this.enableRotate) this.handleTouchMoveRotate(event);
+    this.dolly.handleTouchMoveDolly(event);
+    this.rotate.handleTouchMoveRotate(event, this.pointers);
   };
 
   //
@@ -555,7 +461,7 @@ class OrbitControls extends EventDispatcher {
     const { state } = this;
     if (
       this.enabled === false ||
-      this.enableZoom === false ||
+      this.dolly.enableZoom === false ||
       (state !== STATE.NONE && state !== STATE.ROTATE)
     ) {
       return;
@@ -564,7 +470,7 @@ class OrbitControls extends EventDispatcher {
     event.preventDefault();
 
     this.dispatchEvent(startEvent);
-    this.handleMouseWheel(event);
+    this.dolly.handleMouseWheel(event);
     this.dispatchEvent(endEvent);
   };
 
@@ -579,8 +485,8 @@ class OrbitControls extends EventDispatcher {
       case 1:
         switch (this.touches.ONE) {
           case TOUCH.ROTATE:
-            if (this.enableRotate === false) return;
-            this.handleTouchStartRotate();
+            if (this.rotate.enableRotate === false) return;
+            this.rotate.handleTouchStartRotate(this.pointers);
             this.state = STATE.TOUCH_ROTATE;
             break;
 
@@ -599,13 +505,17 @@ class OrbitControls extends EventDispatcher {
       case 2:
         switch (this.touches.TWO) {
           case TOUCH.DOLLY_PAN:
-            if (this.enableZoom === false && this.enablePan === false) return;
+            if (this.dolly.enableZoom === false && this.enablePan === false)
+              return;
             this.handleTouchStartDollyPan();
             this.state = STATE.TOUCH_DOLLY_PAN;
             break;
 
           case TOUCH.DOLLY_ROTATE:
-            if (this.enableZoom === false && this.enableRotate === false)
+            if (
+              this.dolly.enableZoom === false &&
+              this.rotate.enableRotate === false
+            )
               return;
             this.handleTouchStartDollyRotate();
             this.state = STATE.TOUCH_DOLLY_ROTATE;
@@ -631,8 +541,8 @@ class OrbitControls extends EventDispatcher {
 
     switch (this.state) {
       case STATE.TOUCH_ROTATE:
-        if (this.enableRotate === false) return;
-        this.handleTouchMoveRotate(event);
+        if (this.rotate.enableRotate === false) return;
+        this.rotate.handleTouchMoveRotate(event, this.pointers);
         this.update();
         break;
 
@@ -643,13 +553,17 @@ class OrbitControls extends EventDispatcher {
         break;
 
       case STATE.TOUCH_DOLLY_PAN:
-        if (this.enableZoom === false && this.enablePan === false) return;
+        if (this.dolly.enableZoom === false && this.enablePan === false) return;
         this.handleTouchMoveDollyPan(event);
         this.update();
         break;
 
       case STATE.TOUCH_DOLLY_ROTATE:
-        if (this.enableZoom === false && this.enableRotate === false) return;
+        if (
+          this.dolly.enableZoom === false &&
+          this.rotate.enableRotate === false
+        )
+          return;
         this.handleTouchMoveDollyRotate(event);
         this.update();
         break;
@@ -702,13 +616,10 @@ class OrbitControls extends EventDispatcher {
 
   // update
 
-  getAutoRotationAngle(): number {
-    return ((2 * Math.PI) / 60 / 60) * this.autoRotateSpeed;
-  }
-
   update: () => void;
   mouseHandle: MouseHandle;
   dolly: Dolly;
+  rotate: Rotate;
   constructor(object: Camera, domElement?: HTMLElement) {
     super();
 
@@ -743,8 +654,8 @@ class OrbitControls extends EventDispatcher {
         // angle from z-axis around y-axis
         spherical.setFromVector3(offset);
 
-        if (this.autoRotate && this.state === STATE.NONE) {
-          this.rotateLeft(this.getAutoRotationAngle());
+        if (this.state === STATE.NONE) {
+          this.rotate.updateAutoRotate();
         }
 
         if (this.enableDamping) {
@@ -826,7 +737,7 @@ class OrbitControls extends EventDispatcher {
         // using small-angle approximation cos(x/2) = 1 - x^2 / 8
 
         if (
-          this.zoomChanged ||
+          this.dolly.zoomChanged ||
           lastPosition.distanceToSquared(this.object.position) > EPS ||
           8 * (1 - lastQuaternion.dot(this.object.quaternion)) > EPS
         ) {
@@ -834,7 +745,7 @@ class OrbitControls extends EventDispatcher {
 
           lastPosition.copy(this.object.position);
           lastQuaternion.copy(this.object.quaternion);
-          this.zoomChanged = false;
+          this.dolly.zoomChanged = false;
 
           return true;
         }
@@ -852,6 +763,7 @@ class OrbitControls extends EventDispatcher {
 
     this.mouseHandle = new MouseHandle(this);
     this.dolly = new Dolly(this);
+    this.rotate = new Rotate(this);
     // force an update at start
     this.update();
   }
