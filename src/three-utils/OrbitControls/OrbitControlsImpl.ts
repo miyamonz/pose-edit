@@ -11,6 +11,7 @@ import {
   Vector2,
   Vector3,
 } from "three";
+import { MouseHandle } from "./MouseHandle";
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
@@ -23,10 +24,10 @@ const moduloWrapAround = (offset: number, capacity: number) =>
   ((offset % capacity) + capacity) % capacity;
 
 const changeEvent = { type: "change" };
-const startEvent = { type: "start" };
+export const startEvent = { type: "start" };
 const endEvent = { type: "end" };
 
-const STATE = {
+export const STATE = {
   NONE: -1,
   ROTATE: 0,
   DOLLY: 1,
@@ -166,7 +167,7 @@ class OrbitControls extends EventDispatcher {
     this.zoom0 =
       this.object instanceof PerspectiveCamera ? this.object.zoom : 1;
   }
-  private state: number = STATE.NONE;
+  public state: number = STATE.NONE;
 
   public reset() {
     this.target.copy(this.target0);
@@ -392,64 +393,6 @@ class OrbitControls extends EventDispatcher {
     }
   }
 
-  //
-  // event callbacks - update the object state
-  //
-
-  handleMouseDownRotate = (event: MouseEvent) => {
-    this.rotateStart.set(event.clientX, event.clientY);
-  };
-
-  handleMouseDownDolly(event: MouseEvent) {
-    this.dollyStart.set(event.clientX, event.clientY);
-  }
-
-  handleMouseDownPan = (event: MouseEvent) => {
-    this.panStart.set(event.clientX, event.clientY);
-  };
-
-  handleMouseMoveRotate = (event: MouseEvent) => {
-    this.rotateEnd.set(event.clientX, event.clientY);
-    this.rotateDelta
-      .subVectors(this.rotateEnd, this.rotateStart)
-      .multiplyScalar(this.rotateSpeed);
-
-    const element = this.domElement;
-
-    if (element) {
-      this.rotateLeft(
-        (2 * Math.PI * this.rotateDelta.x) / element.clientHeight
-      ); // yes, height
-      this.rotateUp((2 * Math.PI * this.rotateDelta.y) / element.clientHeight);
-    }
-    this.rotateStart.copy(this.rotateEnd);
-    this.update();
-  };
-
-  handleMouseMoveDolly = (event: MouseEvent) => {
-    this.dollyEnd.set(event.clientX, event.clientY);
-    this.dollyDelta.subVectors(this.dollyEnd, this.dollyStart);
-
-    if (this.dollyDelta.y > 0) {
-      this.dollyOut(this.getZoomScale());
-    } else if (this.dollyDelta.y < 0) {
-      this.dollyIn(this.getZoomScale());
-    }
-
-    this.dollyStart.copy(this.dollyEnd);
-    this.update();
-  };
-
-  handleMouseMovePan = (event: MouseEvent) => {
-    this.panEnd.set(event.clientX, event.clientY);
-    this.panDelta
-      .subVectors(this.panEnd, this.panStart)
-      .multiplyScalar(this.panSpeed);
-    this.pan(this.panDelta.x, this.panDelta.y);
-    this.panStart.copy(this.panEnd);
-    this.update();
-  };
-
   handleMouseWheel = (event: WheelEvent) => {
     if (event.deltaY < 0) {
       this.dollyIn(this.getZoomScale());
@@ -624,7 +567,7 @@ class OrbitControls extends EventDispatcher {
     if (event.pointerType === "touch") {
       this.onTouchStart(event);
     } else {
-      this.onMouseDown(event);
+      this.mouseHandle.onMouseDown(event);
     }
   };
 
@@ -634,7 +577,7 @@ class OrbitControls extends EventDispatcher {
     if (event.pointerType === "touch") {
       this.onTouchMove(event);
     } else {
-      this.onMouseMove(event);
+      this.mouseHandle.onMouseMove(event);
     }
   };
 
@@ -661,87 +604,6 @@ class OrbitControls extends EventDispatcher {
 
   onPointerCancel = (event: PointerEvent) => {
     this.removePointer(event);
-  };
-
-  onMouseDown = (event: MouseEvent) => {
-    let mouseAction;
-
-    switch (event.button) {
-      case 0:
-        mouseAction = this.mouseButtons.LEFT;
-        break;
-
-      case 1:
-        mouseAction = this.mouseButtons.MIDDLE;
-        break;
-
-      case 2:
-        mouseAction = this.mouseButtons.RIGHT;
-        break;
-
-      default:
-        mouseAction = -1;
-    }
-
-    switch (mouseAction) {
-      case MOUSE.DOLLY:
-        if (this.enableZoom === false) return;
-        this.handleMouseDownDolly(event);
-        this.state = STATE.DOLLY;
-        break;
-
-      case MOUSE.ROTATE:
-        if (event.ctrlKey || event.metaKey || event.shiftKey) {
-          if (this.enablePan === false) return;
-          this.handleMouseDownPan(event);
-          this.state = STATE.PAN;
-        } else {
-          if (this.enableRotate === false) return;
-          this.handleMouseDownRotate(event);
-          this.state = STATE.ROTATE;
-        }
-        break;
-
-      case MOUSE.PAN:
-        if (event.ctrlKey || event.metaKey || event.shiftKey) {
-          if (this.enableRotate === false) return;
-          this.handleMouseDownRotate(event);
-          this.state = STATE.ROTATE;
-        } else {
-          if (this.enablePan === false) return;
-          this.handleMouseDownPan(event);
-          this.state = STATE.PAN;
-        }
-        break;
-
-      default:
-        this.state = STATE.NONE;
-    }
-
-    if (this.state !== STATE.NONE) {
-      this.dispatchEvent(startEvent);
-    }
-  };
-
-  onMouseMove = (event: MouseEvent) => {
-    if (this.enabled === false) return;
-
-    switch (this.state) {
-      case STATE.ROTATE:
-        if (this.enableRotate === false) return;
-        this.handleMouseMoveRotate(event);
-        break;
-
-      case STATE.DOLLY:
-        if (this.enableZoom === false) return;
-        this.handleMouseMoveDolly(event);
-        break;
-
-      case STATE.PAN:
-        if (this.enablePan === false) return;
-        this.handleMouseMovePan(event);
-        break;
-    }
   };
 
   onMouseWheel = (event: WheelEvent) => {
@@ -900,6 +762,7 @@ class OrbitControls extends EventDispatcher {
   }
 
   update: () => void;
+  mouseHandle: MouseHandle;
   constructor(object: Camera, domElement?: HTMLElement) {
     super();
 
@@ -1040,6 +903,8 @@ class OrbitControls extends EventDispatcher {
 
     // connect events
     if (domElement !== undefined) this.connect(domElement);
+
+    this.mouseHandle = new MouseHandle(this);
     // force an update at start
     this.update();
   }

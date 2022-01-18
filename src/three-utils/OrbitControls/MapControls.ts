@@ -8,7 +8,7 @@ import { OrbitControls } from "./OrbitControlsImpl";
 //    Orbit - right mouse, or left mouse + ctrl/meta/shiftKey / touch: two-finger rotate
 //    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
 //    Pan - left mouse, or arrow keys / touch: one-finger move
-class MapControls extends OrbitControls {
+export class MapControls extends OrbitControls {
   constructor(object: Camera, domElement?: HTMLElement) {
     super(object, domElement);
 
