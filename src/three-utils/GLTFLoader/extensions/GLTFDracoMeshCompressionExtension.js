@@ -1,5 +1,5 @@
 import { EXTENSIONS } from "./EXTENSIONS";
-import { ATTRIBUTES, WEBGL_COMPONENT_TYPES } from "./CONSTANTS";
+import { ATTRIBUTES, WEBGL_COMPONENT_TYPES } from "../CONSTANTS";
 
 /**
  * DRACO Mesh Compression Extension

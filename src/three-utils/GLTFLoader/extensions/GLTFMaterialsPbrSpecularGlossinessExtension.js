@@ -1,6 +1,6 @@
 import { Color, TangentSpaceNormalMap } from "three";
 import { EXTENSIONS } from "./EXTENSIONS";
-import { GLTFMeshStandardSGMaterial } from "./GLTFMeshStandardSGMaterial";
+import { GLTFMeshStandardSGMaterial } from "../GLTFMeshStandardSGMaterial";
 
 /**
  * Specular-Glossiness Extension

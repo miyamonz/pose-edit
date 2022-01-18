@@ -2,23 +2,23 @@ import { FileLoader, Loader, LoaderUtils } from "three";
 import {
   BINARY_EXTENSION_HEADER_MAGIC,
   GLTFBinaryExtension,
-} from "./GLTFBinaryExtension";
+} from "./extensions/GLTFBinaryExtension";
 import { EXTENSIONS } from "./EXTENSIONS";
-import { GLTFLightsExtension } from "./GLTFLightsExtension";
-import { GLTFMaterialsClearcoatExtension } from "./GLTFMaterialsClearcoatExtension";
-import { GLTFMaterialsIorExtension } from "./GLTFMaterialsIorExtension";
-import { GLTFMaterialsSheenExtension } from "./GLTFMaterialsSheenExtension";
-import { GLTFMaterialsSpecularExtension } from "./GLTFMaterialsSpecularExtension";
-import { GLTFMaterialsTransmissionExtension } from "./GLTFMaterialsTransmissionExtension";
-import { GLTFMaterialsUnlitExtension } from "./GLTFMaterialsUnlitExtension";
-import { GLTFMaterialsVolumeExtension } from "./GLTFMaterialsVolumeExtension";
-import { GLTFMeshoptCompression } from "./GLTFMeshoptCompression";
-import { GLTFTextureBasisUExtension } from "./GLTFTextureBasisUExtension";
-import { GLTFTextureWebPExtension } from "./GLTFTextureWebPExtension";
-import { GLTFDracoMeshCompressionExtension } from "./GLTFDracoMeshCompressionExtension";
-import { GLTFTextureTransformExtension } from "./GLTFTextureTransformExtension";
-import { GLTFMaterialsPbrSpecularGlossinessExtension } from "./GLTFMaterialsPbrSpecularGlossinessExtension";
-import { GLTFMeshQuantizationExtension } from "./GLTFMeshQuantizationExtension";
+import { GLTFLightsExtension } from "./extensions/GLTFLightsExtension";
+import { GLTFMaterialsClearcoatExtension } from "./extensions/GLTFMaterialsClearcoatExtension";
+import { GLTFMaterialsIorExtension } from "./extensions/GLTFMaterialsIorExtension";
+import { GLTFMaterialsSheenExtension } from "./extensions/GLTFMaterialsSheenExtension";
+import { GLTFMaterialsSpecularExtension } from "./extensions/GLTFMaterialsSpecularExtension";
+import { GLTFMaterialsTransmissionExtension } from "./extensions/GLTFMaterialsTransmissionExtension";
+import { GLTFMaterialsUnlitExtension } from "./extensions/GLTFMaterialsUnlitExtension";
+import { GLTFMaterialsVolumeExtension } from "./extensions/GLTFMaterialsVolumeExtension";
+import { GLTFMeshoptCompression } from "./extensions/GLTFMeshoptCompression";
+import { GLTFTextureBasisUExtension } from "./extensions/GLTFTextureBasisUExtension";
+import { GLTFTextureWebPExtension } from "./extensions/GLTFTextureWebPExtension";
+import { GLTFDracoMeshCompressionExtension } from "./extensions/GLTFDracoMeshCompressionExtension";
+import { GLTFTextureTransformExtension } from "./extensions/GLTFTextureTransformExtension";
+import { GLTFMaterialsPbrSpecularGlossinessExtension } from "./extensions/GLTFMaterialsPbrSpecularGlossinessExtension";
+import { GLTFMeshQuantizationExtension } from "./extensions/GLTFMeshQuantizationExtension";
 import { GLTFParser } from "./GLTFParser";
 
 class GLTFLoader extends Loader {
