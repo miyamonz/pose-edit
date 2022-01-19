@@ -1,9 +1,7 @@
 import {
   Camera,
   EventDispatcher,
-  Matrix4,
   MOUSE,
-  OrthographicCamera,
   PerspectiveCamera,
   Quaternion,
   Spherical,
@@ -14,6 +12,7 @@ import {
 import { Dolly } from "./Dolly";
 import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
+import { Pan } from "./Pan";
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
@@ -68,10 +67,6 @@ class OrbitControls extends EventDispatcher {
   dampingFactor = 0.05;
 
   // Set to false to disable panning
-  enablePan = true;
-  panSpeed = 1.0;
-  screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
-  keyPanSpeed = 7.0; // pixels moved per arrow key push
   // Set to true to automatically rotate around the target
   // The four arrow keys
   keys = {
@@ -218,101 +213,6 @@ class OrbitControls extends EventDispatcher {
 
   //internal
 
-  // Set to false to disable rotating
-
-  // pan
-  panOffset = new Vector3();
-
-  panStart = new Vector2();
-  panEnd = new Vector2();
-  panDelta = new Vector2();
-
-  panLeft = (() => {
-    const v = new Vector3();
-    return (distance: number, objectMatrix: Matrix4) => {
-      v.setFromMatrixColumn(objectMatrix, 0); // get X column of objectMatrix
-      v.multiplyScalar(-distance);
-
-      this.panOffset.add(v);
-    };
-  })();
-
-  panUp = (() => {
-    const v = new Vector3();
-
-    return (distance: number, objectMatrix: Matrix4) => {
-      if (this.screenSpacePanning === true) {
-        v.setFromMatrixColumn(objectMatrix, 1);
-      } else {
-        v.setFromMatrixColumn(objectMatrix, 0);
-        v.crossVectors(this.object.up, v);
-      }
-
-      v.multiplyScalar(distance);
-
-      this.panOffset.add(v);
-    };
-  })();
-
-  // deltaX and deltaY are in pixels; right and down are positive
-  pan = (() => {
-    const offset = new Vector3();
-
-    return (deltaX: number, deltaY: number) => {
-      const element = this.domElement;
-
-      if (
-        element &&
-        this.object instanceof PerspectiveCamera &&
-        this.object.isPerspectiveCamera
-      ) {
-        // perspective
-        const position = this.object.position;
-        offset.copy(position).sub(this.target);
-        let targetDistance = offset.length();
-
-        // half of the fov is center to top of screen
-        targetDistance *= Math.tan(((this.object.fov / 2) * Math.PI) / 180.0);
-
-        // we use only clientHeight here so aspect ratio does not distort speed
-        this.panLeft(
-          (2 * deltaX * targetDistance) / element.clientHeight,
-          this.object.matrix
-        );
-        this.panUp(
-          (2 * deltaY * targetDistance) / element.clientHeight,
-          this.object.matrix
-        );
-      } else if (
-        element &&
-        this.object instanceof OrthographicCamera &&
-        this.object.isOrthographicCamera
-      ) {
-        // orthographic
-        this.panLeft(
-          (deltaX * (this.object.right - this.object.left)) /
-            this.object.zoom /
-            element.clientWidth,
-          this.object.matrix
-        );
-        this.panUp(
-          (deltaY * (this.object.top - this.object.bottom)) /
-            this.object.zoom /
-            element.clientHeight,
-          this.object.matrix
-        );
-      } else {
-        // camera neither orthographic nor perspective
-        console.warn(
-          "WARNING: OrbitControls.js encountered an unknown camera type - pan disabled."
-        );
-        this.enablePan = false;
-      }
-    };
-  })();
-
-  // dolly
-
   handleKeyDown = (event: KeyboardEvent) => {
     let needsUpdate = false;
 
@@ -347,20 +247,9 @@ class OrbitControls extends EventDispatcher {
 
   pointers: PointerEvent[] = [];
 
-  handleTouchStartPan = () => {
-    if (this.pointers.length == 1) {
-      this.panStart.set(this.pointers[0].pageX, this.pointers[0].pageY);
-    } else {
-      const x = 0.5 * (this.pointers[0].pageX + this.pointers[1].pageX);
-      const y = 0.5 * (this.pointers[0].pageY + this.pointers[1].pageY);
-
-      this.panStart.set(x, y);
-    }
-  };
-
   handleTouchStartDollyPan = () => {
     this.dolly.handleTouchStartDolly(this.pointers);
-    if (this.enablePan) this.handleTouchStartPan();
+    this.pan.handleTouchStartPan(this.pointers);
   };
 
   handleTouchStartDollyRotate = () => {
@@ -368,26 +257,9 @@ class OrbitControls extends EventDispatcher {
     this.rotate.handleTouchStartRotate(this.pointers);
   };
 
-  handleTouchMovePan = (event: PointerEvent) => {
-    if (this.pointers.length == 1) {
-      this.panEnd.set(event.pageX, event.pageY);
-    } else {
-      const position = this.getSecondPointerPosition(event);
-      const x = 0.5 * (event.pageX + position.x);
-      const y = 0.5 * (event.pageY + position.y);
-      this.panEnd.set(x, y);
-    }
-
-    this.panDelta
-      .subVectors(this.panEnd, this.panStart)
-      .multiplyScalar(this.panSpeed);
-    this.pan(this.panDelta.x, this.panDelta.y);
-    this.panStart.copy(this.panEnd);
-  };
-
   handleTouchMoveDollyPan = (event: PointerEvent) => {
     this.dolly.handleTouchMoveDolly(event);
-    if (this.enablePan) this.handleTouchMovePan(event);
+    this.pan.handleTouchMovePan(event, this.pointers);
   };
 
   handleTouchMoveDollyRotate = (event: PointerEvent) => {
@@ -491,8 +363,8 @@ class OrbitControls extends EventDispatcher {
             break;
 
           case TOUCH.PAN:
-            if (this.enablePan === false) return;
-            this.handleTouchStartPan();
+            if (this.pan.enablePan === false) return;
+            this.pan.handleTouchStartPan(this.pointers);
             this.state = STATE.TOUCH_PAN;
             break;
 
@@ -505,7 +377,7 @@ class OrbitControls extends EventDispatcher {
       case 2:
         switch (this.touches.TWO) {
           case TOUCH.DOLLY_PAN:
-            if (this.dolly.enableZoom === false && this.enablePan === false)
+            if (this.dolly.enableZoom === false && this.pan.enablePan === false)
               return;
             this.handleTouchStartDollyPan();
             this.state = STATE.TOUCH_DOLLY_PAN;
@@ -547,13 +419,14 @@ class OrbitControls extends EventDispatcher {
         break;
 
       case STATE.TOUCH_PAN:
-        if (this.enablePan === false) return;
-        this.handleTouchMovePan(event);
+        if (this.pan.enablePan === false) return;
+        this.pan.handleTouchMovePan(event, this.pointers);
         this.update();
         break;
 
       case STATE.TOUCH_DOLLY_PAN:
-        if (this.dolly.enableZoom === false && this.enablePan === false) return;
+        if (this.dolly.enableZoom === false && this.pan.enablePan === false)
+          return;
         this.handleTouchMoveDollyPan(event);
         this.update();
         break;
@@ -620,6 +493,7 @@ class OrbitControls extends EventDispatcher {
   mouseHandle: MouseHandle;
   dolly: Dolly;
   rotate: Rotate;
+  pan: Pan;
   constructor(object: Camera, domElement?: HTMLElement) {
     super();
 
@@ -705,9 +579,9 @@ class OrbitControls extends EventDispatcher {
         // move target to panned location
 
         if (this.enableDamping === true) {
-          this.target.addScaledVector(this.panOffset, this.dampingFactor);
+          this.target.addScaledVector(this.pan.panOffset, this.dampingFactor);
         } else {
-          this.target.add(this.panOffset);
+          this.target.add(this.pan.panOffset);
         }
 
         offset.setFromSpherical(spherical);
@@ -723,11 +597,11 @@ class OrbitControls extends EventDispatcher {
           sphericalDelta.theta *= 1 - this.dampingFactor;
           sphericalDelta.phi *= 1 - this.dampingFactor;
 
-          this.panOffset.multiplyScalar(1 - this.dampingFactor);
+          this.pan.panOffset.multiplyScalar(1 - this.dampingFactor);
         } else {
           sphericalDelta.set(0, 0, 0);
 
-          this.panOffset.set(0, 0, 0);
+          this.pan.panOffset.set(0, 0, 0);
         }
 
         this.scale = 1;
@@ -764,6 +638,7 @@ class OrbitControls extends EventDispatcher {
     this.mouseHandle = new MouseHandle(this);
     this.dolly = new Dolly(this);
     this.rotate = new Rotate(this);
+    this.pan = new Pan(this);
     // force an update at start
     this.update();
   }

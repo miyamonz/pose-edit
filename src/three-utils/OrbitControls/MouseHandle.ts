@@ -11,7 +11,6 @@ function getMouseActionFromButton(
 
     case 1:
       return mouseButtons.MIDDLE;
-      break;
 
     case 2:
       return mouseButtons.RIGHT;
@@ -28,6 +27,9 @@ export class MouseHandle {
   }
   get rotate() {
     return this.control.rotate;
+  }
+  get pan() {
+    return this.control.pan;
   }
   constructor(control: OrbitControls) {
     this.control = control;
@@ -47,7 +49,7 @@ export class MouseHandle {
 
       case MOUSE.ROTATE:
         if (event.ctrlKey || event.metaKey || event.shiftKey) {
-          if (this.control.enablePan === false) return;
+          if (this.pan.enablePan === false) return;
           this.handleMouseDownPan(event);
           this.control.state = STATE.PAN;
         } else {
@@ -63,7 +65,7 @@ export class MouseHandle {
           this.handleMouseDownRotate(event);
           this.control.state = STATE.ROTATE;
         } else {
-          if (this.control.enablePan === false) return;
+          if (this.pan.enablePan === false) return;
           this.handleMouseDownPan(event);
           this.control.state = STATE.PAN;
         }
@@ -93,7 +95,7 @@ export class MouseHandle {
         break;
 
       case STATE.PAN:
-        if (this.control.enablePan === false) return;
+        if (this.pan.enablePan === false) return;
         this.handleMouseMovePan(event);
         break;
     }
@@ -112,7 +114,7 @@ export class MouseHandle {
   }
 
   handleMouseDownPan = (event: MouseEvent) => {
-    this.control.panStart.set(event.clientX, event.clientY);
+    this.pan.panStart.set(event.clientX, event.clientY);
   };
 
   handleMouseMoveRotate = (event: MouseEvent) => {
@@ -135,12 +137,7 @@ export class MouseHandle {
   };
 
   handleMouseMovePan = (event: MouseEvent) => {
-    this.control.panEnd.set(event.clientX, event.clientY);
-    this.control.panDelta
-      .subVectors(this.control.panEnd, this.control.panStart)
-      .multiplyScalar(this.control.panSpeed);
-    this.control.pan(this.control.panDelta.x, this.control.panDelta.y);
-    this.control.panStart.copy(this.control.panEnd);
+    this.pan.handleMove(event.clientX, event.clientY);
     this.control.update();
   };
 }
