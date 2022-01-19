@@ -13,6 +13,7 @@ import { Dolly } from "./Dolly";
 import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
 import { Pan } from "./Pan";
+import { TouchHandle } from "./TouchHandle";
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
@@ -81,12 +82,7 @@ class OrbitControls extends EventDispatcher {
     MIDDLE: MOUSE.DOLLY,
     RIGHT: MOUSE.PAN,
   };
-  // Touch fingers
-  touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN };
-  target0 = this.target.clone();
 
-  position0: Vector3;
-  zoom0: number;
   // the target DOM element for key events
   _domElementKeyEvents: any = null;
 
@@ -94,6 +90,8 @@ class OrbitControls extends EventDispatcher {
   sphericalDelta = new Spherical();
 
   scale = 1;
+
+  // public methods
 
   public getPolarAngle() {
     return this.spherical.phi;
@@ -150,6 +148,10 @@ class OrbitControls extends EventDispatcher {
     domElement.addEventListener("keydown", this.onKeyDown);
     this._domElementKeyEvents = domElement;
   }
+  // save and reset
+  target0 = this.target.clone();
+  position0: Vector3;
+  zoom0: number;
 
   public saveState() {
     this.target0.copy(this.target);
@@ -218,22 +220,22 @@ class OrbitControls extends EventDispatcher {
 
     switch (event.code) {
       case this.keys.UP:
-        this.pan(0, this.keyPanSpeed);
+        this.pan.pan(0, this.pan.keyPanSpeed);
         needsUpdate = true;
         break;
 
       case this.keys.BOTTOM:
-        this.pan(0, -this.keyPanSpeed);
+        this.pan.pan(0, -this.pan.keyPanSpeed);
         needsUpdate = true;
         break;
 
       case this.keys.LEFT:
-        this.pan(this.keyPanSpeed, 0);
+        this.pan.pan(this.pan.keyPanSpeed, 0);
         needsUpdate = true;
         break;
 
       case this.keys.RIGHT:
-        this.pan(-this.keyPanSpeed, 0);
+        this.pan.pan(-this.pan.keyPanSpeed, 0);
         needsUpdate = true;
         break;
     }
@@ -288,7 +290,7 @@ class OrbitControls extends EventDispatcher {
     this.addPointer(event);
 
     if (event.pointerType === "touch") {
-      this.onTouchStart(event);
+      this.touchHandle.onTouchStart(event, this.pointers);
     } else {
       this.mouseHandle.onMouseDown(event);
     }
@@ -298,7 +300,7 @@ class OrbitControls extends EventDispatcher {
     if (this.enabled === false) return;
 
     if (event.pointerType === "touch") {
-      this.onTouchMove(event);
+      this.touchHandle.onTouchMove(event, this.pointers);
     } else {
       this.mouseHandle.onMouseMove(event);
     }
@@ -347,103 +349,8 @@ class OrbitControls extends EventDispatcher {
   };
 
   onKeyDown = (event: KeyboardEvent) => {
-    if (this.enabled === false || this.enablePan === false) return;
+    if (this.enabled === false || this.pan.enablePan === false) return;
     this.handleKeyDown(event);
-  };
-  onTouchStart = (event: PointerEvent) => {
-    this.trackPointer(event);
-
-    switch (this.pointers.length) {
-      case 1:
-        switch (this.touches.ONE) {
-          case TOUCH.ROTATE:
-            if (this.rotate.enableRotate === false) return;
-            this.rotate.handleTouchStartRotate(this.pointers);
-            this.state = STATE.TOUCH_ROTATE;
-            break;
-
-          case TOUCH.PAN:
-            if (this.pan.enablePan === false) return;
-            this.pan.handleTouchStartPan(this.pointers);
-            this.state = STATE.TOUCH_PAN;
-            break;
-
-          default:
-            this.state = STATE.NONE;
-        }
-
-        break;
-
-      case 2:
-        switch (this.touches.TWO) {
-          case TOUCH.DOLLY_PAN:
-            if (this.dolly.enableZoom === false && this.pan.enablePan === false)
-              return;
-            this.handleTouchStartDollyPan();
-            this.state = STATE.TOUCH_DOLLY_PAN;
-            break;
-
-          case TOUCH.DOLLY_ROTATE:
-            if (
-              this.dolly.enableZoom === false &&
-              this.rotate.enableRotate === false
-            )
-              return;
-            this.handleTouchStartDollyRotate();
-            this.state = STATE.TOUCH_DOLLY_ROTATE;
-            break;
-
-          default:
-            this.state = STATE.NONE;
-        }
-
-        break;
-
-      default:
-        this.state = STATE.NONE;
-    }
-
-    if (this.state !== STATE.NONE) {
-      this.dispatchEvent(startEvent);
-    }
-  };
-
-  onTouchMove = (event: PointerEvent) => {
-    this.trackPointer(event);
-
-    switch (this.state) {
-      case STATE.TOUCH_ROTATE:
-        if (this.rotate.enableRotate === false) return;
-        this.rotate.handleTouchMoveRotate(event, this.pointers);
-        this.update();
-        break;
-
-      case STATE.TOUCH_PAN:
-        if (this.pan.enablePan === false) return;
-        this.pan.handleTouchMovePan(event, this.pointers);
-        this.update();
-        break;
-
-      case STATE.TOUCH_DOLLY_PAN:
-        if (this.dolly.enableZoom === false && this.pan.enablePan === false)
-          return;
-        this.handleTouchMoveDollyPan(event);
-        this.update();
-        break;
-
-      case STATE.TOUCH_DOLLY_ROTATE:
-        if (
-          this.dolly.enableZoom === false &&
-          this.rotate.enableRotate === false
-        )
-          return;
-        this.handleTouchMoveDollyRotate(event);
-        this.update();
-        break;
-
-      default:
-        this.state = STATE.NONE;
-    }
   };
 
   onContextMenu = (event: Event) => {
@@ -491,6 +398,7 @@ class OrbitControls extends EventDispatcher {
 
   update: () => void;
   mouseHandle: MouseHandle;
+  touchHandle: TouchHandle;
   dolly: Dolly;
   rotate: Rotate;
   pan: Pan;
@@ -499,6 +407,9 @@ class OrbitControls extends EventDispatcher {
 
     this.object = object;
     this.domElement = domElement;
+
+    // ES2022 Class Static Block使いたい
+    // いや、constructorで渡されるものを使ってるのは無理か
 
     // this method is exposed, but perhaps it would be better if we can make it private...
     this.update = (() => {
@@ -517,7 +428,6 @@ class OrbitControls extends EventDispatcher {
       const twoPI = 2 * Math.PI;
 
       return (): boolean => {
-        const { spherical, sphericalDelta, scale } = this;
         const position = this.object.position;
 
         offset.copy(position).sub(this.target);
@@ -526,18 +436,19 @@ class OrbitControls extends EventDispatcher {
         offset.applyQuaternion(quat);
 
         // angle from z-axis around y-axis
-        spherical.setFromVector3(offset);
+        this.spherical.setFromVector3(offset);
 
         if (this.state === STATE.NONE) {
           this.rotate.updateAutoRotate();
         }
 
         if (this.enableDamping) {
-          spherical.theta += sphericalDelta.theta * this.dampingFactor;
-          spherical.phi += sphericalDelta.phi * this.dampingFactor;
+          this.spherical.theta +=
+            this.sphericalDelta.theta * this.dampingFactor;
+          this.spherical.phi += this.sphericalDelta.phi * this.dampingFactor;
         } else {
-          spherical.theta += sphericalDelta.theta;
-          spherical.phi += sphericalDelta.phi;
+          this.spherical.theta += this.sphericalDelta.theta;
+          this.spherical.phi += this.sphericalDelta.phi;
         }
 
         // restrict theta to be between desired limits
@@ -553,27 +464,30 @@ class OrbitControls extends EventDispatcher {
           else if (max > Math.PI) max -= twoPI;
 
           if (min <= max) {
-            spherical.theta = Math.max(min, Math.min(max, spherical.theta));
+            this.spherical.theta = Math.max(
+              min,
+              Math.min(max, this.spherical.theta)
+            );
           } else {
-            spherical.theta =
-              spherical.theta > (min + max) / 2
-                ? Math.max(min, spherical.theta)
-                : Math.min(max, spherical.theta);
+            this.spherical.theta =
+              this.spherical.theta > (min + max) / 2
+                ? Math.max(min, this.spherical.theta)
+                : Math.min(max, this.spherical.theta);
           }
         }
 
         // restrict phi to be between desired limits
-        spherical.phi = Math.max(
+        this.spherical.phi = Math.max(
           this.minPolarAngle,
-          Math.min(this.maxPolarAngle, spherical.phi)
+          Math.min(this.maxPolarAngle, this.spherical.phi)
         );
-        spherical.makeSafe();
-        spherical.radius *= scale;
+        this.spherical.makeSafe();
+        this.spherical.radius *= this.scale;
 
         // restrict radius to be between desired limits
-        spherical.radius = Math.max(
+        this.spherical.radius = Math.max(
           this.minDistance,
-          Math.min(this.maxDistance, spherical.radius)
+          Math.min(this.maxDistance, this.spherical.radius)
         );
 
         // move target to panned location
@@ -584,7 +498,7 @@ class OrbitControls extends EventDispatcher {
           this.target.add(this.pan.panOffset);
         }
 
-        offset.setFromSpherical(spherical);
+        offset.setFromSpherical(this.spherical);
 
         // rotate offset back to "camera-up-vector-is-up" space
         offset.applyQuaternion(quatInverse);
@@ -594,12 +508,12 @@ class OrbitControls extends EventDispatcher {
         this.object.lookAt(this.target);
 
         if (this.enableDamping === true) {
-          sphericalDelta.theta *= 1 - this.dampingFactor;
-          sphericalDelta.phi *= 1 - this.dampingFactor;
+          this.sphericalDelta.theta *= 1 - this.dampingFactor;
+          this.sphericalDelta.phi *= 1 - this.dampingFactor;
 
           this.pan.panOffset.multiplyScalar(1 - this.dampingFactor);
         } else {
-          sphericalDelta.set(0, 0, 0);
+          this.sphericalDelta.set(0, 0, 0);
 
           this.pan.panOffset.set(0, 0, 0);
         }
@@ -627,6 +541,7 @@ class OrbitControls extends EventDispatcher {
         return false;
       };
     })();
+
     // for reset
     this.position0 = this.object.position.clone();
     this.zoom0 =
@@ -636,6 +551,7 @@ class OrbitControls extends EventDispatcher {
     if (domElement !== undefined) this.connect(domElement);
 
     this.mouseHandle = new MouseHandle(this);
+    this.touchHandle = new TouchHandle(this);
     this.dolly = new Dolly(this);
     this.rotate = new Rotate(this);
     this.pan = new Pan(this);
