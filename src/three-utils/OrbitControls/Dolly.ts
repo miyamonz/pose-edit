@@ -1,5 +1,13 @@
-import { OrthographicCamera, PerspectiveCamera, Vector2 } from "three";
+import {
+  OrthographicCamera,
+  PerspectiveCamera,
+  Quaternion,
+  Vector2,
+  Vector3,
+} from "three";
 import { OrbitControls } from "./OrbitControlsImpl";
+const EPS = 0.000001;
+const changeEvent = { type: "change" };
 
 export class Dolly {
   dollyStart = new Vector2();
@@ -131,5 +139,28 @@ export class Dolly {
     }
 
     this.dollyStart.copy(this.dollyEnd);
+  }
+
+  lastPosition = new Vector3();
+  lastQuaternion = new Quaternion();
+  checkZoomed() {
+    // update condition is:
+    // min(camera displacement, camera rotation in radians)^2 > EPS
+    // using small-angle approximation cos(x/2) = 1 - x^2 / 8
+
+    if (
+      this.zoomChanged ||
+      this.lastPosition.distanceToSquared(this.object.position) > EPS ||
+      8 * (1 - this.lastQuaternion.dot(this.object.quaternion)) > EPS
+    ) {
+      this.control.dispatchEvent(changeEvent);
+
+      this.lastPosition.copy(this.object.position);
+      this.lastQuaternion.copy(this.object.quaternion);
+      this.zoomChanged = false;
+
+      return true;
+    }
+    return false;
   }
 }

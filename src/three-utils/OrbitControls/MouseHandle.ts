@@ -1,8 +1,8 @@
 import { MOUSE } from "three";
-import { OrbitControls, STATE, startEvent } from "./OrbitControlsImpl";
+import { OrbitControls, STATE } from "./OrbitControlsImpl";
 
 function getMouseActionFromButton(
-  mouseButtons: OrbitControls["mouseButtons"],
+  mouseButtons: MouseHandle["mouseButtons"],
   button: number
 ) {
   switch (button) {
@@ -21,6 +21,13 @@ function getMouseActionFromButton(
 }
 
 export class MouseHandle {
+  // Mouse buttons
+  mouseButtons = {
+    LEFT: MOUSE.ROTATE,
+    MIDDLE: MOUSE.DOLLY,
+    RIGHT: MOUSE.PAN,
+  };
+
   control: OrbitControls;
   get dolly() {
     return this.control.dolly;
@@ -34,9 +41,9 @@ export class MouseHandle {
   constructor(control: OrbitControls) {
     this.control = control;
   }
-  onMouseDown = (event: MouseEvent) => {
+  onMouseDown = (event: MouseEvent): number | undefined => {
     const mouseAction = getMouseActionFromButton(
-      this.control.mouseButtons,
+      this.mouseButtons,
       event.button
     );
 
@@ -44,61 +51,53 @@ export class MouseHandle {
       case MOUSE.DOLLY:
         if (this.dolly.enableZoom === false) return;
         this.handleMouseDownDolly(event);
-        this.control.state = STATE.DOLLY;
-        break;
+        return STATE.DOLLY;
 
       case MOUSE.ROTATE:
         if (event.ctrlKey || event.metaKey || event.shiftKey) {
           if (this.pan.enablePan === false) return;
           this.handleMouseDownPan(event);
-          this.control.state = STATE.PAN;
+          return STATE.PAN;
         } else {
           if (this.rotate.enableRotate === false) return;
           this.handleMouseDownRotate(event);
-          this.control.state = STATE.ROTATE;
+          return STATE.ROTATE;
         }
-        break;
 
       case MOUSE.PAN:
         if (event.ctrlKey || event.metaKey || event.shiftKey) {
           if (this.rotate.enableRotate === false) return;
           this.handleMouseDownRotate(event);
-          this.control.state = STATE.ROTATE;
+          return STATE.ROTATE;
         } else {
           if (this.pan.enablePan === false) return;
           this.handleMouseDownPan(event);
-          this.control.state = STATE.PAN;
+          return STATE.PAN;
         }
-        break;
 
       default:
-        this.control.state = STATE.NONE;
-    }
-
-    if (this.control.state !== STATE.NONE) {
-      this.control.dispatchEvent(startEvent);
+        return STATE.NONE;
     }
   };
 
-  onMouseMove = (event: MouseEvent) => {
-    if (this.control.enabled === false) return;
-
-    switch (this.control.state) {
+  onMouseMove = (event: MouseEvent, state: number): boolean => {
+    switch (state) {
       case STATE.ROTATE:
-        if (this.rotate.enableRotate === false) return;
+        if (this.rotate.enableRotate === false) return false;
         this.handleMouseMoveRotate(event);
-        break;
+        return true;
 
       case STATE.DOLLY:
-        if (this.dolly.enableZoom === false) return;
+        if (this.dolly.enableZoom === false) return false;
         this.handleMouseMoveDolly(event);
-        break;
+        return true;
 
       case STATE.PAN:
-        if (this.pan.enablePan === false) return;
+        if (this.pan.enablePan === false) return false;
         this.handleMouseMovePan(event);
-        break;
+        return true;
     }
+    return false;
   };
 
   //
@@ -119,25 +118,20 @@ export class MouseHandle {
 
   handleMouseMoveRotate = (event: MouseEvent) => {
     this.rotate.rotateEnd.set(event.clientX, event.clientY);
-
     this.rotate.multiplyDelta();
 
     const element = this.control.domElement;
-
     if (element) {
       this.rotate.rotateRelativeToElementHeight(element.clientHeight);
     }
     this.rotate.copyEndToStart();
-    this.control.update();
   };
 
   handleMouseMoveDolly = (event: MouseEvent) => {
     this.dolly.handleMove(event.clientX, event.clientY);
-    this.control.update();
   };
 
   handleMouseMovePan = (event: MouseEvent) => {
     this.pan.handleMove(event.clientX, event.clientY);
-    this.control.update();
   };
 }

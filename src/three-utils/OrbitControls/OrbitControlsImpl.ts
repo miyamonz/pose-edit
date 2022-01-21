@@ -40,8 +40,6 @@ export const STATE = {
   TOUCH_DOLLY_ROTATE: 6,
 };
 
-const EPS = 0.000001;
-
 class OrbitControls extends EventDispatcher {
   object: Camera;
   domElement: HTMLElement | undefined;
@@ -66,22 +64,6 @@ class OrbitControls extends EventDispatcher {
   // If damping is enabled, you must call controls.update() in your animation loop
   enableDamping = false;
   dampingFactor = 0.05;
-
-  // Set to false to disable panning
-  // Set to true to automatically rotate around the target
-  // The four arrow keys
-  keys = {
-    LEFT: "ArrowLeft",
-    UP: "ArrowUp",
-    RIGHT: "ArrowRight",
-    BOTTOM: "ArrowDown",
-  };
-  // Mouse buttons
-  mouseButtons = {
-    LEFT: MOUSE.ROTATE,
-    MIDDLE: MOUSE.DOLLY,
-    RIGHT: MOUSE.PAN,
-  };
 
   // the target DOM element for key events
   _domElementKeyEvents: any = null;
@@ -215,38 +197,6 @@ class OrbitControls extends EventDispatcher {
 
   //internal
 
-  handleKeyDown = (event: KeyboardEvent) => {
-    let needsUpdate = false;
-
-    switch (event.code) {
-      case this.keys.UP:
-        this.pan.pan(0, this.pan.keyPanSpeed);
-        needsUpdate = true;
-        break;
-
-      case this.keys.BOTTOM:
-        this.pan.pan(0, -this.pan.keyPanSpeed);
-        needsUpdate = true;
-        break;
-
-      case this.keys.LEFT:
-        this.pan.pan(this.pan.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
-
-      case this.keys.RIGHT:
-        this.pan.pan(-this.pan.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
-    }
-
-    if (needsUpdate) {
-      // prevent the browser from scrolling on cursor keys
-      event.preventDefault();
-      this.update();
-    }
-  };
-
   pointers: PointerEvent[] = [];
 
   //
@@ -270,9 +220,19 @@ class OrbitControls extends EventDispatcher {
     this.addPointer(event);
 
     if (event.pointerType === "touch") {
-      this.touchHandle.onTouchStart(event, this.pointers);
+      this.trackPointer(event);
+      const newState = this.touchHandle.onTouchStart(this.pointers);
+      if (newState !== undefined) {
+        this.state = newState;
+      }
     } else {
-      this.mouseHandle.onMouseDown(event);
+      const newState = this.mouseHandle.onMouseDown(event);
+      if (newState !== undefined) {
+        this.state = newState;
+      }
+    }
+    if (this.state !== STATE.NONE) {
+      this.dispatchEvent(startEvent);
     }
   };
 
@@ -280,9 +240,29 @@ class OrbitControls extends EventDispatcher {
     if (this.enabled === false) return;
 
     if (event.pointerType === "touch") {
-      this.touchHandle.onTouchMove(event, this.pointers);
+      this.trackPointer(event);
+      const shouldBeUpdate = this.touchHandle.onTouchMove(
+        event,
+        this.pointers,
+        this.state
+      );
+      if (
+        ![
+          STATE.TOUCH_ROTATE,
+          STATE.TOUCH_DOLLY_PAN,
+          STATE.TOUCH_DOLLY_ROTATE,
+        ].includes(this.state)
+      ) {
+        this.state = STATE.NONE;
+      }
+      if (shouldBeUpdate) {
+        this.update();
+      }
     } else {
-      this.mouseHandle.onMouseMove(event);
+      const shouldBeUudate = this.mouseHandle.onMouseMove(event, this.state);
+      if (shouldBeUudate) {
+        this.update();
+      }
     }
   };
 
@@ -329,8 +309,8 @@ class OrbitControls extends EventDispatcher {
   };
 
   onKeyDown = (event: KeyboardEvent) => {
-    if (this.enabled === false || this.pan.enablePan === false) return;
-    this.handleKeyDown(event);
+    if (this.enabled === false) return;
+    this.keyboardHandle.handleKeyDown(event);
   };
 
   onContextMenu = (event: Event) => {
@@ -379,6 +359,7 @@ class OrbitControls extends EventDispatcher {
   update: () => void;
   mouseHandle: MouseHandle;
   touchHandle: TouchHandle;
+  keyboardHandle: KeyboardHandle;
   dolly: Dolly;
   rotate: Rotate;
   pan: Pan;
@@ -402,9 +383,6 @@ class OrbitControls extends EventDispatcher {
       );
       const quatInverse = quat.clone().invert();
 
-      const lastPosition = new Vector3();
-      const lastQuaternion = new Quaternion();
-
       return (): boolean => {
         const position = this.object.position;
 
@@ -420,6 +398,7 @@ class OrbitControls extends EventDispatcher {
           this.rotate.updateAutoRotate();
         }
 
+        // apply delta
         if (this.enableDamping) {
           this.spherical.theta +=
             this.sphericalDelta.theta * this.dampingFactor;
@@ -433,25 +412,8 @@ class OrbitControls extends EventDispatcher {
 
         let min = this.minAzimuthAngle;
         let max = this.maxAzimuthAngle;
-
         if (isFinite(min) && isFinite(max)) {
-          if (min < -Math.PI) min += twoPI;
-          else if (min > Math.PI) min -= twoPI;
-
-          if (max < -Math.PI) max += twoPI;
-          else if (max > Math.PI) max -= twoPI;
-
-          if (min <= max) {
-            this.spherical.theta = Math.max(
-              min,
-              Math.min(max, this.spherical.theta)
-            );
-          } else {
-            this.spherical.theta =
-              this.spherical.theta > (min + max) / 2
-                ? Math.max(min, this.spherical.theta)
-                : Math.min(max, this.spherical.theta);
-          }
+          this.spherical.theta = restrictTheta(min, max, this.spherical.theta);
         }
 
         // restrict phi to be between desired limits
@@ -469,12 +431,7 @@ class OrbitControls extends EventDispatcher {
         );
 
         // move target to panned location
-
-        if (this.enableDamping === true) {
-          this.target.addScaledVector(this.pan.panOffset, this.dampingFactor);
-        } else {
-          this.target.add(this.pan.panOffset);
-        }
+        this.pan.update();
 
         //こっから別のことやってる？
 
@@ -490,35 +447,13 @@ class OrbitControls extends EventDispatcher {
         if (this.enableDamping === true) {
           this.sphericalDelta.theta *= 1 - this.dampingFactor;
           this.sphericalDelta.phi *= 1 - this.dampingFactor;
-
-          this.pan.panOffset.multiplyScalar(1 - this.dampingFactor);
         } else {
           this.sphericalDelta.set(0, 0, 0);
-
-          this.pan.panOffset.set(0, 0, 0);
         }
 
         this.scale = 1;
 
-        // update condition is:
-        // min(camera displacement, camera rotation in radians)^2 > EPS
-        // using small-angle approximation cos(x/2) = 1 - x^2 / 8
-
-        if (
-          this.dolly.zoomChanged ||
-          lastPosition.distanceToSquared(this.object.position) > EPS ||
-          8 * (1 - lastQuaternion.dot(this.object.quaternion)) > EPS
-        ) {
-          this.dispatchEvent(changeEvent);
-
-          lastPosition.copy(this.object.position);
-          lastQuaternion.copy(this.object.quaternion);
-          this.dolly.zoomChanged = false;
-
-          return true;
-        }
-
-        return false;
+        return this.dolly.checkZoomed();
       };
     })();
 
@@ -532,6 +467,8 @@ class OrbitControls extends EventDispatcher {
 
     this.mouseHandle = new MouseHandle(this);
     this.touchHandle = new TouchHandle(this);
+    this.keyboardHandle = new KeyboardHandle(this);
+
     this.dolly = new Dolly(this);
     this.rotate = new Rotate(this);
     this.pan = new Pan(this);
@@ -541,3 +478,70 @@ class OrbitControls extends EventDispatcher {
 }
 
 export { OrbitControls };
+
+function restrictTheta(min: number, max: number, theta: number): number {
+  if (min < -Math.PI) min += twoPI;
+  else if (min > Math.PI) min -= twoPI;
+
+  if (max < -Math.PI) max += twoPI;
+  else if (max > Math.PI) max -= twoPI;
+
+  if (min <= max) {
+    return Math.max(min, Math.min(max, theta));
+  } else {
+    return theta > (min + max) / 2
+      ? Math.max(min, theta)
+      : Math.min(max, theta);
+  }
+}
+
+class KeyboardHandle {
+  // Set to false to disable panning
+  // Set to true to automatically rotate around the target
+  // The four arrow keys
+  keys = {
+    LEFT: "ArrowLeft",
+    UP: "ArrowUp",
+    RIGHT: "ArrowRight",
+    BOTTOM: "ArrowDown",
+  };
+  control: OrbitControls;
+  get pan() {
+    return this.control.pan;
+  }
+  constructor(control: OrbitControls) {
+    this.control = control;
+  }
+  handleKeyDown = (event: KeyboardEvent) => {
+    if (this.pan.enablePan === false) return;
+    let needsUpdate = false;
+
+    switch (event.code) {
+      case this.keys.UP:
+        this.pan.pan(0, this.pan.keyPanSpeed);
+        needsUpdate = true;
+        break;
+
+      case this.keys.BOTTOM:
+        this.pan.pan(0, -this.pan.keyPanSpeed);
+        needsUpdate = true;
+        break;
+
+      case this.keys.LEFT:
+        this.pan.pan(this.pan.keyPanSpeed, 0);
+        needsUpdate = true;
+        break;
+
+      case this.keys.RIGHT:
+        this.pan.pan(-this.pan.keyPanSpeed, 0);
+        needsUpdate = true;
+        break;
+    }
+
+    if (needsUpdate) {
+      // prevent the browser from scrolling on cursor keys
+      event.preventDefault();
+      this.control.update();
+    }
+  };
+}

@@ -17,47 +17,27 @@ export class TouchHandle {
     return this.control.pan;
   }
 
-  set state(v: number) {
-    this.control.state = v;
-  }
-  update() {
-    this.control.update();
-  }
-
-  trackPointer(event: PointerEvent) {
-    this.control.trackPointer(event);
-  }
-  dispatchEvent(event: { type: string }) {
-    this.control.dispatchEvent(event);
-  }
-
   constructor(control: OrbitControls) {
     this.control = control;
   }
 
-  onTouchStart = (event: PointerEvent, pointers: PointerEvent[]) => {
-    this.trackPointer(event);
-
+  onTouchStart = (pointers: PointerEvent[]): number | undefined => {
     switch (pointers.length) {
       case 1:
         switch (this.touches.ONE) {
           case TOUCH.ROTATE:
             if (this.rotate.enableRotate === false) return;
             this.rotate.handleTouchStartRotate(pointers);
-            this.state = STATE.TOUCH_ROTATE;
-            break;
+            return STATE.TOUCH_ROTATE;
 
           case TOUCH.PAN:
             if (this.pan.enablePan === false) return;
             this.pan.handleTouchStartPan(pointers);
-            this.state = STATE.TOUCH_PAN;
-            break;
+            return STATE.TOUCH_PAN;
 
           default:
-            this.state = STATE.NONE;
+            return STATE.NONE;
         }
-
-        break;
 
       case 2:
         switch (this.touches.TWO) {
@@ -65,8 +45,7 @@ export class TouchHandle {
             if (this.dolly.enableZoom === false && this.pan.enablePan === false)
               return;
             this.handleTouchStartDollyPan(pointers);
-            this.state = STATE.TOUCH_DOLLY_PAN;
-            break;
+            return STATE.TOUCH_DOLLY_PAN;
 
           case TOUCH.DOLLY_ROTATE:
             if (
@@ -75,60 +54,49 @@ export class TouchHandle {
             )
               return;
             this.handleTouchStartDollyRotate(pointers);
-            this.state = STATE.TOUCH_DOLLY_ROTATE;
-            break;
+            return STATE.TOUCH_DOLLY_ROTATE;
 
           default:
-            this.state = STATE.NONE;
+            return STATE.NONE;
         }
 
-        break;
-
       default:
-        this.state = STATE.NONE;
-    }
-
-    if (this.state !== STATE.NONE) {
-      this.dispatchEvent(startEvent);
+        return STATE.NONE;
     }
   };
 
-  onTouchMove = (event: PointerEvent, pointers: PointerEvent[]) => {
-    this.trackPointer(event);
-
-    switch (this.state) {
+  onTouchMove = (
+    event: PointerEvent,
+    pointers: PointerEvent[],
+    state: number
+  ): boolean => {
+    switch (state) {
       case STATE.TOUCH_ROTATE:
-        if (this.rotate.enableRotate === false) return;
+        if (this.rotate.enableRotate === false) return false;
         this.rotate.handleTouchMoveRotate(event, pointers);
-        this.update();
-        break;
+        return true;
 
       case STATE.TOUCH_PAN:
-        if (this.pan.enablePan === false) return;
+        if (this.pan.enablePan === false) return false;
         this.pan.handleTouchMovePan(event, pointers);
-        this.update();
-        break;
+        return true;
 
       case STATE.TOUCH_DOLLY_PAN:
         if (this.dolly.enableZoom === false && this.pan.enablePan === false)
-          return;
+          return false;
         this.handleTouchMoveDollyPan(event, pointers);
-        this.update();
-        break;
+        return true;
 
       case STATE.TOUCH_DOLLY_ROTATE:
         if (
           this.dolly.enableZoom === false &&
           this.rotate.enableRotate === false
         )
-          return;
+          return false;
         this.handleTouchMoveDollyRotate(event, pointers);
-        this.update();
-        break;
-
-      default:
-        this.state = STATE.NONE;
+        return true;
     }
+    return false;
   };
 
   handleTouchStartDollyPan = (pointers: PointerEvent[]) => {

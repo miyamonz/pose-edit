@@ -160,4 +160,16 @@ export class Pan {
     this.pan(this.panDelta.x, this.panDelta.y);
     this.panStart.copy(this.panEnd);
   }
+
+  // update
+  update() {
+    const dampingFactor = this.control.dampingFactor;
+    if (this.control.enableDamping === true) {
+      this.target.addScaledVector(this.panOffset, dampingFactor);
+      this.panOffset.multiplyScalar(1 - dampingFactor);
+    } else {
+      this.target.add(this.panOffset);
+      this.panOffset.set(0, 0, 0);
+    }
+  }
 }
