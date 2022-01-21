@@ -1,7 +1,6 @@
 import {
   Camera,
   EventDispatcher,
-  MOUSE,
   PerspectiveCamera,
   Quaternion,
   Spherical,
@@ -13,6 +12,7 @@ import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
 import { Pan } from "./Pan";
 import { TouchHandle } from "./TouchHandle";
+import { KeyboardHandle } from "./KeyboardHandle";
 const twoPI = 2 * Math.PI;
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
@@ -241,7 +241,7 @@ class OrbitControls extends EventDispatcher {
 
     if (event.pointerType === "touch") {
       this.trackPointer(event);
-      const shouldBeUpdate = this.touchHandle.onTouchMove(
+      const needsUpdate = this.touchHandle.onTouchMove(
         event,
         this.pointers,
         this.state
@@ -255,12 +255,12 @@ class OrbitControls extends EventDispatcher {
       ) {
         this.state = STATE.NONE;
       }
-      if (shouldBeUpdate) {
+      if (needsUpdate) {
         this.update();
       }
     } else {
-      const shouldBeUudate = this.mouseHandle.onMouseMove(event, this.state);
-      if (shouldBeUudate) {
+      const needsUpdate = this.mouseHandle.onMouseMove(event, this.state);
+      if (needsUpdate) {
         this.update();
       }
     }
@@ -310,7 +310,12 @@ class OrbitControls extends EventDispatcher {
 
   onKeyDown = (event: KeyboardEvent) => {
     if (this.enabled === false) return;
-    this.keyboardHandle.handleKeyDown(event);
+    const needsUpdate = this.keyboardHandle.handleKeyDown(event);
+    if (needsUpdate) {
+      // prevent the browser from scrolling on cursor keys
+      event.preventDefault();
+      this.update();
+    }
   };
 
   onContextMenu = (event: Event) => {
@@ -493,55 +498,4 @@ function restrictTheta(min: number, max: number, theta: number): number {
       ? Math.max(min, theta)
       : Math.min(max, theta);
   }
-}
-
-class KeyboardHandle {
-  // Set to false to disable panning
-  // Set to true to automatically rotate around the target
-  // The four arrow keys
-  keys = {
-    LEFT: "ArrowLeft",
-    UP: "ArrowUp",
-    RIGHT: "ArrowRight",
-    BOTTOM: "ArrowDown",
-  };
-  control: OrbitControls;
-  get pan() {
-    return this.control.pan;
-  }
-  constructor(control: OrbitControls) {
-    this.control = control;
-  }
-  handleKeyDown = (event: KeyboardEvent) => {
-    if (this.pan.enablePan === false) return;
-    let needsUpdate = false;
-
-    switch (event.code) {
-      case this.keys.UP:
-        this.pan.pan(0, this.pan.keyPanSpeed);
-        needsUpdate = true;
-        break;
-
-      case this.keys.BOTTOM:
-        this.pan.pan(0, -this.pan.keyPanSpeed);
-        needsUpdate = true;
-        break;
-
-      case this.keys.LEFT:
-        this.pan.pan(this.pan.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
-
-      case this.keys.RIGHT:
-        this.pan.pan(-this.pan.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
-    }
-
-    if (needsUpdate) {
-      // prevent the browser from scrolling on cursor keys
-      event.preventDefault();
-      this.control.update();
-    }
-  };
 }
