@@ -16,6 +16,21 @@ export class TouchHandle {
   get pan() {
     return this.control.pan;
   }
+
+  set state(v: number) {
+    this.control.state = v;
+  }
+  update() {
+    this.control.update();
+  }
+
+  trackPointer(event: PointerEvent) {
+    this.control.trackPointer(event);
+  }
+  dispatchEvent(event: { type: string }) {
+    this.control.dispatchEvent(event);
+  }
+
   constructor(control: OrbitControls) {
     this.control = control;
   }
@@ -49,7 +64,7 @@ export class TouchHandle {
           case TOUCH.DOLLY_PAN:
             if (this.dolly.enableZoom === false && this.pan.enablePan === false)
               return;
-            this.handleTouchStartDollyPan();
+            this.handleTouchStartDollyPan(pointers);
             this.state = STATE.TOUCH_DOLLY_PAN;
             break;
 
@@ -59,7 +74,7 @@ export class TouchHandle {
               this.rotate.enableRotate === false
             )
               return;
-            this.handleTouchStartDollyRotate();
+            this.handleTouchStartDollyRotate(pointers);
             this.state = STATE.TOUCH_DOLLY_ROTATE;
             break;
 
@@ -97,7 +112,7 @@ export class TouchHandle {
       case STATE.TOUCH_DOLLY_PAN:
         if (this.dolly.enableZoom === false && this.pan.enablePan === false)
           return;
-        this.handleTouchMoveDollyPan(event);
+        this.handleTouchMoveDollyPan(event, pointers);
         this.update();
         break;
 
@@ -107,12 +122,35 @@ export class TouchHandle {
           this.rotate.enableRotate === false
         )
           return;
-        this.handleTouchMoveDollyRotate(event);
+        this.handleTouchMoveDollyRotate(event, pointers);
         this.update();
         break;
 
       default:
         this.state = STATE.NONE;
     }
+  };
+
+  handleTouchStartDollyPan = (pointers: PointerEvent[]) => {
+    this.dolly.handleTouchStartDolly(pointers);
+    this.pan.handleTouchStartPan(pointers);
+  };
+
+  handleTouchStartDollyRotate = (pointers: PointerEvent[]) => {
+    this.dolly.handleTouchStartDolly(pointers);
+    this.rotate.handleTouchStartRotate(pointers);
+  };
+
+  handleTouchMoveDollyPan = (event: PointerEvent, pointers: PointerEvent[]) => {
+    this.dolly.handleTouchMoveDolly(event);
+    this.pan.handleTouchMovePan(event, pointers);
+  };
+
+  handleTouchMoveDollyRotate = (
+    event: PointerEvent,
+    pointers: PointerEvent[]
+  ) => {
+    this.dolly.handleTouchMoveDolly(event);
+    this.rotate.handleTouchMoveRotate(event, pointers);
   };
 }

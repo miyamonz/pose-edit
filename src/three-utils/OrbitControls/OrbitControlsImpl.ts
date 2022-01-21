@@ -5,7 +5,6 @@ import {
   PerspectiveCamera,
   Quaternion,
   Spherical,
-  TOUCH,
   Vector2,
   Vector3,
 } from "three";
@@ -14,6 +13,7 @@ import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
 import { Pan } from "./Pan";
 import { TouchHandle } from "./TouchHandle";
+const twoPI = 2 * Math.PI;
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
@@ -249,26 +249,6 @@ class OrbitControls extends EventDispatcher {
 
   pointers: PointerEvent[] = [];
 
-  handleTouchStartDollyPan = () => {
-    this.dolly.handleTouchStartDolly(this.pointers);
-    this.pan.handleTouchStartPan(this.pointers);
-  };
-
-  handleTouchStartDollyRotate = () => {
-    this.dolly.handleTouchStartDolly(this.pointers);
-    this.rotate.handleTouchStartRotate(this.pointers);
-  };
-
-  handleTouchMoveDollyPan = (event: PointerEvent) => {
-    this.dolly.handleTouchMoveDolly(event);
-    this.pan.handleTouchMovePan(event, this.pointers);
-  };
-
-  handleTouchMoveDollyRotate = (event: PointerEvent) => {
-    this.dolly.handleTouchMoveDolly(event);
-    this.rotate.handleTouchMoveRotate(event, this.pointers);
-  };
-
   //
   // event handlers - FSM: listen for events and reset state
   //
@@ -425,8 +405,6 @@ class OrbitControls extends EventDispatcher {
       const lastPosition = new Vector3();
       const lastQuaternion = new Quaternion();
 
-      const twoPI = 2 * Math.PI;
-
       return (): boolean => {
         const position = this.object.position;
 
@@ -497,6 +475,8 @@ class OrbitControls extends EventDispatcher {
         } else {
           this.target.add(this.pan.panOffset);
         }
+
+        //こっから別のことやってる？
 
         offset.setFromSpherical(this.spherical);
 
