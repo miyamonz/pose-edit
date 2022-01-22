@@ -25,7 +25,7 @@ export const moduloWrapAround = (offset: number, capacity: number) =>
   ((offset % capacity) + capacity) % capacity;
 
 const changeEvent = { type: "change" };
-export const startEvent = { type: "start" };
+const startEvent = { type: "start" };
 const endEvent = { type: "end" };
 
 export const STATE = {
@@ -292,25 +292,24 @@ class OrbitControls extends EventDispatcher {
     return this.pointerPositions[pointer.pointerId];
   }
 
-  // update
   tmp: Vector3 = new Vector3();
-
   // this method is exposed, but perhaps it would be better if we can make it private...
   update = () => {
     const offset = this.tmp.copy(this.object.position).sub(this.target);
-    this.sphericalState.allignSpherical(offset);
 
+    // move target to panned location
+    this.pan.update(this.target);
+
+    // rotate
     if (this.state === STATE.NONE) {
       this.rotate.updateAutoRotate();
     }
-
-    this.sphericalState.applyDelta();
-
-    this.sphericalState.restrict();
-    // move target to panned location
-    this.pan.update();
-
+    this.sphericalState.allignSpherical(offset);
     this.sphericalState.updateObjectTransform(this.object, this.target);
+
+    // dollyはOrbitControlsにおいては、cameraのzoomを変更することを意味する
+    // なので、特にupdate()を呼び出す必要はない
+    // ただし、他と同様にdampingなどの実装をすれば当然update()を呼び出す必要があるだろう
 
     const changed = this.dolly.checkZoomed(this.object);
     if (changed) {

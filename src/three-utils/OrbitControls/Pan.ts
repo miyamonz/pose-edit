@@ -45,8 +45,7 @@ export class Pan {
       this.object.isPerspectiveCamera
     ) {
       // perspective
-      const position = this.object.position;
-      this.v.copy(position).sub(this.target);
+      this.v.copy(this.object.position).sub(this.target);
       let targetDistance = this.v.length();
 
       // half of the fov is center to top of screen
@@ -151,13 +150,13 @@ export class Pan {
   dampingFactor = 0.05;
 
   // update
-  update() {
+  update(target: Vector3) {
     const dampingFactor = this.dampingFactor;
     if (this.enableDamping === true) {
-      this.target.addScaledVector(this.panOffset, dampingFactor);
+      target.addScaledVector(this.panOffset, dampingFactor);
       this.panOffset.multiplyScalar(1 - dampingFactor);
     } else {
-      this.target.add(this.panOffset);
+      target.add(this.panOffset);
       this.panOffset.set(0, 0, 0);
     }
   }

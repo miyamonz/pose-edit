@@ -1,5 +1,5 @@
 import { TOUCH } from "three";
-import { OrbitControls, STATE, startEvent } from "./OrbitControlsImpl";
+import { OrbitControls, STATE } from "./OrbitControlsImpl";
 
 export class TouchHandle {
   control: OrbitControls;

@@ -34,7 +34,7 @@ export class SphericalState {
     this.quatInverse = this.quat.clone().invert();
   }
 
-  restrict() {
+  private restrictAngle() {
     // restrict theta to be between desired limits
     let min = this.minAzimuthAngle;
     let max = this.maxAzimuthAngle;
@@ -64,7 +64,7 @@ export class SphericalState {
   enableDamping = true;
   dampingFactor = 0.05;
 
-  applyDelta() {
+  private applyDelta() {
     // apply delta
     if (this.enableDamping) {
       this.spherical.theta += this.sphericalDelta.theta * this.dampingFactor;
@@ -84,13 +84,21 @@ export class SphericalState {
   }
 
   updateObjectTransform(object: Camera, target: Vector3) {
+    this.applyDelta();
+    this.restrictAngle();
+
+    // update camera postion and rotation
+
     this.offset.setFromSpherical(this.spherical);
     // rotate offset back to "camera-up-vector-is-up" space
     this.offset.applyQuaternion(this.quatInverse);
-
     object.position.copy(target).add(this.offset);
     object.lookAt(target);
 
+    this.tickDelta();
+  }
+
+  private tickDelta() {
     if (this.enableDamping === true) {
       this.sphericalDelta.theta *= 1 - this.dampingFactor;
       this.sphericalDelta.phi *= 1 - this.dampingFactor;
