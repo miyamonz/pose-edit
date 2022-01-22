@@ -1,4 +1,5 @@
 import {
+  Camera,
   OrthographicCamera,
   PerspectiveCamera,
   Quaternion,
@@ -7,7 +8,6 @@ import {
 } from "three";
 import { OrbitControls } from "./OrbitControlsImpl";
 const EPS = 0.000001;
-const changeEvent = { type: "change" };
 
 export class Dolly {
   dollyStart = new Vector2();
@@ -35,12 +35,7 @@ export class Dolly {
   get object() {
     return this.control.object;
   }
-  get scale() {
-    return this.control.scale;
-  }
-  set scale(v: number) {
-    this.control.scale = v;
-  }
+  scale = 1;
 
   dollyOut(dollyScale: number) {
     if (
@@ -97,8 +92,6 @@ export class Dolly {
     } else if (event.deltaY > 0) {
       this.dollyOut(this.getZoomScale());
     }
-
-    this.control.update();
   };
 
   handleTouchStartDolly = (pointers: PointerEvent[]) => {
@@ -141,24 +134,29 @@ export class Dolly {
     this.dollyStart.copy(this.dollyEnd);
   }
 
+  getNextFrameScale() {
+    let scale = this.scale;
+    this.scale = 1;
+    return scale;
+  }
+
+  // こっから下、zoomChanged以外はバラバラやな
   lastPosition = new Vector3();
   lastQuaternion = new Quaternion();
-  checkZoomed() {
+
+  checkZoomed(object: Camera) {
     // update condition is:
     // min(camera displacement, camera rotation in radians)^2 > EPS
     // using small-angle approximation cos(x/2) = 1 - x^2 / 8
 
     if (
       this.zoomChanged ||
-      this.lastPosition.distanceToSquared(this.object.position) > EPS ||
-      8 * (1 - this.lastQuaternion.dot(this.object.quaternion)) > EPS
+      this.lastPosition.distanceToSquared(object.position) > EPS ||
+      8 * (1 - this.lastQuaternion.dot(object.quaternion)) > EPS
     ) {
-      this.control.dispatchEvent(changeEvent);
-
-      this.lastPosition.copy(this.object.position);
-      this.lastQuaternion.copy(this.object.quaternion);
+      this.lastPosition.copy(object.position);
+      this.lastQuaternion.copy(object.quaternion);
       this.zoomChanged = false;
-
       return true;
     }
     return false;

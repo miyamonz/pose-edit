@@ -1,4 +1,4 @@
-import { OrbitControls } from "./OrbitControlsImpl";
+import { Pan } from "./Pan";
 
 export class KeyboardHandle {
   // Set to false to disable panning
@@ -10,39 +10,28 @@ export class KeyboardHandle {
     RIGHT: "ArrowRight",
     BOTTOM: "ArrowDown",
   };
-  control: OrbitControls;
-  get pan() {
-    return this.control.pan;
-  }
-  constructor(control: OrbitControls) {
-    this.control = control;
+  pan: Pan;
+  constructor(pan: Pan) {
+    this.pan = pan;
   }
   handleKeyDown = (event: KeyboardEvent) => {
     if (this.pan.enablePan === false) return;
-    let needsUpdate = false;
 
     switch (event.code) {
       case this.keys.UP:
         this.pan.pan(0, this.pan.keyPanSpeed);
-        needsUpdate = true;
-        break;
+        return true;
 
       case this.keys.BOTTOM:
         this.pan.pan(0, -this.pan.keyPanSpeed);
-        needsUpdate = true;
-        break;
-
+        return true;
       case this.keys.LEFT:
         this.pan.pan(this.pan.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
-
+        return true;
       case this.keys.RIGHT:
         this.pan.pan(-this.pan.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
+        return true;
     }
-
-    return needsUpdate;
+    return false;
   };
 }

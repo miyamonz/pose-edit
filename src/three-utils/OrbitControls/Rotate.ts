@@ -10,7 +10,7 @@ export class Rotate {
   rotateDelta = new Vector2();
 
   get sphericalDelta() {
-    return this.control.sphericalDelta;
+    return this.control.sphericalState.sphericalDelta;
   }
   constructor(control: OrbitControls) {
     this.control = control;

@@ -2,8 +2,6 @@ import {
   Camera,
   EventDispatcher,
   PerspectiveCamera,
-  Quaternion,
-  Spherical,
   Vector2,
   Vector3,
 } from "three";
@@ -13,7 +11,8 @@ import { MouseHandle } from "./MouseHandle";
 import { Pan } from "./Pan";
 import { TouchHandle } from "./TouchHandle";
 import { KeyboardHandle } from "./KeyboardHandle";
-const twoPI = 2 * Math.PI;
+import { SphericalState } from "./SphericalState";
+export const twoPI = 2 * Math.PI;
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
@@ -22,7 +21,7 @@ const twoPI = 2 * Math.PI;
 //    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
 //    Pan - right mouse, or left mouse + ctrl/meta/shiftKey, or arrow keys / touch: two-finger move
 
-const moduloWrapAround = (offset: number, capacity: number) =>
+export const moduloWrapAround = (offset: number, capacity: number) =>
   ((offset % capacity) + capacity) % capacity;
 
 const changeEvent = { type: "change" };
@@ -47,80 +46,13 @@ class OrbitControls extends EventDispatcher {
   enabled = true;
   // "target" sets the location of focus, where the object orbits around
   target = new Vector3();
-  // How far you can dolly in and out ( PerspectiveCamera only )
-  minDistance = 0;
-  maxDistance = Infinity;
-
-  // How far you can orbit vertically, upper and lower limits.
-  // Range is 0 to Math.PI radians.
-  minPolarAngle = 0; // radians
-  maxPolarAngle = Math.PI; // radians
-
-  // How far you can orbit horizontally, upper and lower limits.
-  // If set, the interval [ min, max ] must be a sub-interval of [ - 2 PI, 2 PI ], with ( max - min < 2 PI )
-  minAzimuthAngle = -Infinity; // radians
-  maxAzimuthAngle = Infinity; // radians
   // Set to true to enable damping (inertia)
   // If damping is enabled, you must call controls.update() in your animation loop
-  enableDamping = false;
-  dampingFactor = 0.05;
 
   // the target DOM element for key events
   _domElementKeyEvents: any = null;
 
-  spherical = new Spherical();
-  sphericalDelta = new Spherical();
-
-  scale = 1;
-
   // public methods
-
-  public getPolarAngle() {
-    return this.spherical.phi;
-  }
-  public getAzimuthalAngle() {
-    return this.spherical.theta;
-  }
-
-  public setPolarAngle(value: number) {
-    // use modulo wrapping to safeguard value
-    let phi = moduloWrapAround(value, 2 * Math.PI);
-    let currentPhi = this.spherical.phi;
-
-    // convert to the equivalent shortest angle
-    if (currentPhi < 0) currentPhi += 2 * Math.PI;
-    if (phi < 0) phi += 2 * Math.PI;
-    let phiDist = Math.abs(phi - currentPhi);
-    if (2 * Math.PI - phiDist < phiDist) {
-      if (phi < currentPhi) {
-        phi += 2 * Math.PI;
-      } else {
-        currentPhi += 2 * Math.PI;
-      }
-    }
-    this.sphericalDelta.phi = phi - currentPhi;
-    this.update();
-  }
-
-  public setAzimuthalAngle(value: number) {
-    // use modulo wrapping to safeguard value
-    let theta = moduloWrapAround(value, 2 * Math.PI);
-    let currentTheta = this.spherical.theta;
-
-    // convert to the equivalent shortest angle
-    if (currentTheta < 0) currentTheta += 2 * Math.PI;
-    if (theta < 0) theta += 2 * Math.PI;
-    let thetaDist = Math.abs(theta - currentTheta);
-    if (2 * Math.PI - thetaDist < thetaDist) {
-      if (theta < currentTheta) {
-        theta += 2 * Math.PI;
-      } else {
-        currentTheta += 2 * Math.PI;
-      }
-    }
-    this.sphericalDelta.theta = theta - currentTheta;
-    this.update();
-  }
 
   public getDistance() {
     return this.object.position.distanceTo(this.target);
@@ -305,6 +237,7 @@ class OrbitControls extends EventDispatcher {
 
     this.dispatchEvent(startEvent);
     this.dolly.handleMouseWheel(event);
+    this.update();
     this.dispatchEvent(endEvent);
   };
 
@@ -360,14 +293,39 @@ class OrbitControls extends EventDispatcher {
   }
 
   // update
+  tmp: Vector3 = new Vector3();
 
-  update: () => void;
+  // this method is exposed, but perhaps it would be better if we can make it private...
+  update = () => {
+    const offset = this.tmp.copy(this.object.position).sub(this.target);
+    this.sphericalState.allignSpherical(offset);
+
+    if (this.state === STATE.NONE) {
+      this.rotate.updateAutoRotate();
+    }
+
+    this.sphericalState.applyDelta();
+
+    this.sphericalState.restrict();
+    // move target to panned location
+    this.pan.update();
+
+    this.sphericalState.updateObjectTransform(this.object, this.target);
+
+    const changed = this.dolly.checkZoomed(this.object);
+    if (changed) {
+      this.dispatchEvent(changeEvent);
+    }
+  };
+
   mouseHandle: MouseHandle;
   touchHandle: TouchHandle;
   keyboardHandle: KeyboardHandle;
+  sphericalState: SphericalState;
   dolly: Dolly;
   rotate: Rotate;
   pan: Pan;
+
   constructor(object: Camera, domElement?: HTMLElement) {
     super();
 
@@ -377,91 +335,6 @@ class OrbitControls extends EventDispatcher {
     // ES2022 Class Static Block使いたい
     // いや、constructorで渡されるものを使ってるのは無理か
 
-    // this method is exposed, but perhaps it would be better if we can make it private...
-    this.update = (() => {
-      const offset = new Vector3();
-
-      // so camera.up is the orbit axis
-      const quat = new Quaternion().setFromUnitVectors(
-        this.object.up,
-        new Vector3(0, 1, 0)
-      );
-      const quatInverse = quat.clone().invert();
-
-      return (): boolean => {
-        const position = this.object.position;
-
-        offset.copy(position).sub(this.target);
-
-        // rotate offset to "y-axis-is-up" space
-        offset.applyQuaternion(quat);
-
-        // angle from z-axis around y-axis
-        this.spherical.setFromVector3(offset);
-
-        if (this.state === STATE.NONE) {
-          this.rotate.updateAutoRotate();
-        }
-
-        // apply delta
-        if (this.enableDamping) {
-          this.spherical.theta +=
-            this.sphericalDelta.theta * this.dampingFactor;
-          this.spherical.phi += this.sphericalDelta.phi * this.dampingFactor;
-        } else {
-          this.spherical.theta += this.sphericalDelta.theta;
-          this.spherical.phi += this.sphericalDelta.phi;
-        }
-
-        // restrict theta to be between desired limits
-
-        let min = this.minAzimuthAngle;
-        let max = this.maxAzimuthAngle;
-        if (isFinite(min) && isFinite(max)) {
-          this.spherical.theta = restrictTheta(min, max, this.spherical.theta);
-        }
-
-        // restrict phi to be between desired limits
-        this.spherical.phi = Math.max(
-          this.minPolarAngle,
-          Math.min(this.maxPolarAngle, this.spherical.phi)
-        );
-        this.spherical.makeSafe();
-        this.spherical.radius *= this.scale;
-
-        // restrict radius to be between desired limits
-        this.spherical.radius = Math.max(
-          this.minDistance,
-          Math.min(this.maxDistance, this.spherical.radius)
-        );
-
-        // move target to panned location
-        this.pan.update();
-
-        //こっから別のことやってる？
-
-        offset.setFromSpherical(this.spherical);
-
-        // rotate offset back to "camera-up-vector-is-up" space
-        offset.applyQuaternion(quatInverse);
-
-        position.copy(this.target).add(offset);
-
-        this.object.lookAt(this.target);
-
-        if (this.enableDamping === true) {
-          this.sphericalDelta.theta *= 1 - this.dampingFactor;
-          this.sphericalDelta.phi *= 1 - this.dampingFactor;
-        } else {
-          this.sphericalDelta.set(0, 0, 0);
-        }
-
-        this.scale = 1;
-
-        return this.dolly.checkZoomed();
-      };
-    })();
-
     // for reset
     this.position0 = this.object.position.clone();
     this.zoom0 =
@@ -470,32 +343,19 @@ class OrbitControls extends EventDispatcher {
     // connect events
     if (domElement !== undefined) this.connect(domElement);
 
-    this.mouseHandle = new MouseHandle(this);
-    this.touchHandle = new TouchHandle(this);
-    this.keyboardHandle = new KeyboardHandle(this);
-
     this.dolly = new Dolly(this);
     this.rotate = new Rotate(this);
     this.pan = new Pan(this);
+
+    this.sphericalState = new SphericalState(this);
+
+    this.mouseHandle = new MouseHandle(this);
+    this.touchHandle = new TouchHandle(this);
+    this.keyboardHandle = new KeyboardHandle(this.pan);
+
     // force an update at start
     this.update();
   }
 }
 
 export { OrbitControls };
-
-function restrictTheta(min: number, max: number, theta: number): number {
-  if (min < -Math.PI) min += twoPI;
-  else if (min > Math.PI) min -= twoPI;
-
-  if (max < -Math.PI) max += twoPI;
-  else if (max > Math.PI) max -= twoPI;
-
-  if (min <= max) {
-    return Math.max(min, Math.min(max, theta));
-  } else {
-    return theta > (min + max) / 2
-      ? Math.max(min, theta)
-      : Math.min(max, theta);
-  }
-}
