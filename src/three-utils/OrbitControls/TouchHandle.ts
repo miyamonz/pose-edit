@@ -1,13 +1,18 @@
 import { TOUCH } from "three";
-import { OrbitControls, STATE } from "./OrbitControlsImpl";
+import { Dolly } from "./Dolly";
+import { STATE } from "./OrbitControlsImpl";
+import { Pan } from "./Pan";
 import { getSecondPointer } from "./PointerState";
+import { Rotate } from "./Rotate";
 
 const pointerToVector = (pointer: PointerEvent) => ({
   x: pointer.pageX,
   y: pointer.pageY,
 });
+
+type Control = { dolly: Dolly; rotate: Rotate; pan: Pan };
 export class TouchHandle {
-  control: OrbitControls;
+  control: Control;
 
   // Touch fingers
   touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN };
@@ -22,7 +27,7 @@ export class TouchHandle {
     return this.control.pan;
   }
 
-  constructor(control: OrbitControls) {
+  constructor(control: Control) {
     this.control = control;
   }
 

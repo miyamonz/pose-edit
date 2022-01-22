@@ -90,6 +90,8 @@ export class Dolly {
     }
   };
 
+  //TODO: distanceを外から代入する
+
   startDollyBy2Points(
     p0: { x: number; y: number },
     p1: { x: number; y: number }

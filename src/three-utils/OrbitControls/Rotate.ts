@@ -1,8 +1,8 @@
-import { Vector2 } from "three";
-import { OrbitControls } from "./OrbitControlsImpl";
+import { Vector2, Vector3, Camera } from "three";
+import { SphericalState } from "./SphericalState";
 
 export class Rotate {
-  control: OrbitControls;
+  sphericalState: SphericalState;
 
   rotateSpeed = 1.0;
   private rotateStart = new Vector2();
@@ -10,7 +10,7 @@ export class Rotate {
   private rotateDelta = new Vector2();
 
   get sphericalDelta() {
-    return this.control.sphericalState.sphericalDelta;
+    return this.sphericalState.sphericalDelta;
   }
 
   vectorMapper: (
@@ -19,13 +19,13 @@ export class Rotate {
   ) => readonly [leftAngle: number, upAngle: number];
 
   constructor(
-    control: OrbitControls,
+    sphericalState: SphericalState,
     vectorMapper?: (
       x: number,
       y: number
     ) => readonly [leftAngle: number, upAngle: number]
   ) {
-    this.control = control;
+    this.sphericalState = sphericalState;
     this.vectorMapper = vectorMapper ?? ((x, y) => [x, y]);
   }
 
@@ -67,5 +67,10 @@ export class Rotate {
     this.rotateUp(this.rotateDelta.y);
 
     this.rotateStart.copy(this.rotateEnd);
+  }
+
+  update(offset: Vector3, object: Camera, target: Vector3) {
+    this.sphericalState.allignSpherical(offset);
+    this.sphericalState.updateObjectTransform(object, target);
   }
 }

@@ -248,8 +248,8 @@ class OrbitControls extends EventDispatcher {
     if (this.state === STATE.NONE) {
       this.rotate.updateAutoRotate();
     }
-    this.sphericalState.allignSpherical(offset);
-    this.sphericalState.updateObjectTransform(this.object, this.target);
+
+    this.rotate.update(offset, this.object, this.target);
 
     // dollyはOrbitControlsにおいては、cameraのzoomを変更することを意味する
     // なので、特にupdate()を呼び出す必要はない
@@ -264,7 +264,6 @@ class OrbitControls extends EventDispatcher {
   mouseHandle: MouseHandle;
   touchHandle: TouchHandle;
   keyboardHandle: KeyboardHandle;
-  sphericalState: SphericalState;
   dolly: Dolly;
   rotate: Rotate;
   pan: Pan;
@@ -281,21 +280,31 @@ class OrbitControls extends EventDispatcher {
     // connect events
     if (domElement !== undefined) this.connect(domElement);
 
-    this.dolly = new Dolly(object);
+    const dolly = new Dolly(object);
+
+    const sphericalState = new SphericalState(dolly, object);
     const mapper = (x: number, y: number) => {
       const height = this.domElement?.clientHeight ?? 1;
       const leftAngle = height ? (2 * Math.PI * x) / height : 0;
       const upAngle = height ? (2 * Math.PI * y) / height : 0;
       return [leftAngle, upAngle] as const;
     };
-    this.rotate = new Rotate(this, mapper);
-    this.pan = new Pan(this);
+    const rotate = new Rotate(sphericalState, mapper);
 
-    this.sphericalState = new SphericalState(this);
+    const pan = new Pan({
+      object,
+      target: this.target,
+      domElement: () => this.domElement,
+    });
 
-    this.mouseHandle = new MouseHandle(this);
-    this.touchHandle = new TouchHandle(this);
-    this.keyboardHandle = new KeyboardHandle(this.pan);
+    const control = { dolly, rotate, pan };
+    this.mouseHandle = new MouseHandle(control);
+    this.touchHandle = new TouchHandle(control);
+    this.keyboardHandle = new KeyboardHandle(pan);
+
+    this.dolly = dolly;
+    this.rotate = rotate;
+    this.pan = pan;
 
     // force an update at start
     this.update();

@@ -1,4 +1,5 @@
 import { Camera, Quaternion, Spherical, Vector3 } from "three";
+import { Dolly } from "./Dolly";
 import { OrbitControls, moduloWrapAround, twoPI } from "./OrbitControlsImpl";
 
 export class SphericalState {
@@ -19,16 +20,14 @@ export class SphericalState {
   spherical = new Spherical();
   sphericalDelta = new Spherical();
 
-  control: OrbitControls;
-  get dolly() {
-    return this.control.dolly;
-  }
-  constructor(control: OrbitControls) {
-    this.control = control;
+  dolly: Dolly;
+
+  constructor(dolly: Dolly, object: Camera) {
+    this.dolly = dolly;
 
     // so camera.up is the orbit axis
     this.quat = new Quaternion().setFromUnitVectors(
-      control.object.up,
+      object.up,
       new Vector3(0, 1, 0)
     );
     this.quatInverse = this.quat.clone().invert();

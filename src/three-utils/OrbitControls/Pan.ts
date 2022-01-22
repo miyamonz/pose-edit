@@ -4,10 +4,14 @@ import {
   PerspectiveCamera,
   Vector2,
   Vector3,
+  Camera,
 } from "three";
-import { OrbitControls } from "./OrbitControlsImpl";
-import { getSecondPointer } from "./PointerState";
 
+type Control = {
+  object: Camera;
+  target: Vector3;
+  domElement(): HTMLElement | undefined;
+};
 export class Pan {
   enablePan = true;
   panSpeed = 1.0;
@@ -16,13 +20,14 @@ export class Pan {
 
   private panOffset = new Vector3();
 
-  panStart = new Vector2();
+  private panStart = new Vector2();
   private panEnd = new Vector2();
   private panDelta = new Vector2();
 
-  control: OrbitControls;
+  control: Control;
+  // domElementへの依存は、clientWidthとheightないといい感じにpanできないからまあいいか
   get domElement() {
-    return this.control.domElement;
+    return this.control.domElement();
   }
   get object() {
     return this.control.object;
@@ -31,7 +36,7 @@ export class Pan {
     return this.control.target;
   }
 
-  constructor(control: OrbitControls) {
+  constructor(control: Control) {
     this.control = control;
   }
 
