@@ -31,7 +31,7 @@ export class PointerState {
     position.set(event.pageX, event.pageY);
   }
 
-  getSecondPointerPosition(event: PointerEvent) {
+  private getSecondPointerPosition(event: PointerEvent) {
     const pointer =
       event.pointerId === this.pointers[0].pointerId
         ? this.pointers[1]
@@ -39,6 +39,7 @@ export class PointerState {
     return this.pointerPositions[pointer.pointerId];
   }
 }
+
 export function getSecondPointer(
   event: PointerEvent,
   pointers: PointerEvent[]

@@ -6,6 +6,7 @@ import {
   Vector3,
 } from "three";
 import { OrbitControls } from "./OrbitControlsImpl";
+import { getSecondPointer } from "./PointerState";
 
 export class Pan {
   enablePan = true;
@@ -28,9 +29,6 @@ export class Pan {
   }
   get target() {
     return this.control.target;
-  }
-  get pointerState() {
-    return this.control.pointerState;
   }
 
   constructor(control: OrbitControls) {
@@ -90,13 +88,13 @@ export class Pan {
     }
   };
 
-  panLeft = (distance: number, objectMatrix: Matrix4) => {
+  private panLeft = (distance: number, objectMatrix: Matrix4) => {
     this.v.setFromMatrixColumn(objectMatrix, 0); // get X column of objectMatrix
     this.v.multiplyScalar(-distance);
     this.panOffset.add(this.v);
   };
 
-  panUp = (distance: number, objectMatrix: Matrix4) => {
+  private panUp = (distance: number, objectMatrix: Matrix4) => {
     if (this.screenSpacePanning === true) {
       this.v.setFromMatrixColumn(objectMatrix, 1);
     } else {
@@ -124,20 +122,21 @@ export class Pan {
   handleTouchMovePan = (event: PointerEvent, pointers: PointerEvent[]) => {
     if (!this.enablePan) return;
 
-    if (pointers.length == 1) {
-      this.panEnd.set(event.pageX, event.pageY);
-    } else {
-      const position = this.pointerState.getSecondPointerPosition(event);
-      const x = 0.5 * (event.pageX + position.x);
-      const y = 0.5 * (event.pageY + position.y);
-      this.panEnd.set(x, y);
+    function getPos(): readonly [number, number] {
+      const p0 = [event.pageX, event.pageY] as const;
+      if (pointers.length == 1) {
+        return p0;
+      } else {
+        const pointer = getSecondPointer(event, pointers);
+        const position = { x: pointer.pageX, y: pointer.pageY };
+
+        const x = 0.5 * (p0[0] + position.x);
+        const y = 0.5 * (p0[1] + position.y);
+        return [x, y] as const;
+      }
     }
 
-    this.panDelta
-      .subVectors(this.panEnd, this.panStart)
-      .multiplyScalar(this.panSpeed);
-    this.pan(this.panDelta.x, this.panDelta.y);
-    this.panStart.copy(this.panEnd);
+    this.handleMove(...getPos());
   };
 
   handleMove(x: number, y: number) {

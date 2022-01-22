@@ -281,7 +281,7 @@ class OrbitControls extends EventDispatcher {
     // connect events
     if (domElement !== undefined) this.connect(domElement);
 
-    this.dolly = new Dolly(this);
+    this.dolly = new Dolly(object);
     this.rotate = new Rotate(this);
     this.pan = new Pan(this);
 

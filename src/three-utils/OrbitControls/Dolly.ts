@@ -6,7 +6,7 @@ import {
   Vector2,
   Vector3,
 } from "three";
-import { OrbitControls } from "./OrbitControlsImpl";
+
 const EPS = 0.000001;
 
 export class Dolly {
@@ -27,19 +27,12 @@ export class Dolly {
     return Math.pow(0.95, this.zoomSpeed);
   }
 
-  control: OrbitControls;
-  get pointerState() {
-    return this.control.pointerState;
-  }
-  constructor(control: OrbitControls) {
-    this.control = control;
+  object: Camera;
+  constructor(object: Camera) {
+    this.object = object;
   }
 
-  get object() {
-    return this.control.object;
-  }
   scale = 1;
-
   dollyOut(dollyScale: number) {
     if (
       this.object instanceof PerspectiveCamera &&
