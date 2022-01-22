@@ -1,10 +1,4 @@
-import {
-  Camera,
-  EventDispatcher,
-  PerspectiveCamera,
-  Vector2,
-  Vector3,
-} from "three";
+import { Camera, EventDispatcher, Vector2, Vector3 } from "three";
 import { Dolly } from "./Dolly";
 import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
@@ -12,6 +6,7 @@ import { Pan } from "./Pan";
 import { TouchHandle } from "./TouchHandle";
 import { KeyboardHandle } from "./KeyboardHandle";
 import { SphericalState } from "./SphericalState";
+import { SaveState } from "./SaveState";
 export const twoPI = 2 * Math.PI;
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
@@ -62,33 +57,8 @@ class OrbitControls extends EventDispatcher {
     domElement.addEventListener("keydown", this.onKeyDown);
     this._domElementKeyEvents = domElement;
   }
-  // save and reset
-  target0 = this.target.clone();
-  position0: Vector3;
-  zoom0: number;
 
-  public saveState() {
-    this.target0.copy(this.target);
-    this.position0.copy(this.object.position);
-    this.zoom0 =
-      this.object instanceof PerspectiveCamera ? this.object.zoom : 1;
-  }
   public state: number = STATE.NONE;
-
-  public reset() {
-    this.target.copy(this.target0);
-    this.object.position.copy(this.position0);
-    if (this.object instanceof PerspectiveCamera) {
-      this.object.zoom = this.zoom0;
-      this.object.updateProjectionMatrix();
-    }
-
-    this.dispatchEvent(changeEvent);
-
-    this.update();
-
-    this.state = STATE.NONE;
-  }
 
   // https://github.com/mrdoob/three.js/issues/20575
   connect = (domElement: HTMLElement): void => {
@@ -292,6 +262,14 @@ class OrbitControls extends EventDispatcher {
     return this.pointerPositions[pointer.pointerId];
   }
 
+  saveState: SaveState;
+  reset() {
+    this.saveState.reset();
+    this.dispatchEvent(changeEvent);
+    this.update();
+    this.state = STATE.NONE;
+  }
+
   tmp: Vector3 = new Vector3();
   // this method is exposed, but perhaps it would be better if we can make it private...
   update = () => {
@@ -331,13 +309,8 @@ class OrbitControls extends EventDispatcher {
     this.object = object;
     this.domElement = domElement;
 
-    // ES2022 Class Static Block使いたい
-    // いや、constructorで渡されるものを使ってるのは無理か
-
     // for reset
-    this.position0 = this.object.position.clone();
-    this.zoom0 =
-      this.object instanceof PerspectiveCamera ? this.object.zoom : 1;
+    this.saveState = new SaveState(object, this.target);
 
     // connect events
     if (domElement !== undefined) this.connect(domElement);
