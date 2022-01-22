@@ -1,4 +1,4 @@
-import { Camera, EventDispatcher, Vector2, Vector3 } from "three";
+import { Camera, EventDispatcher, Vector3 } from "three";
 import { Dolly } from "./Dolly";
 import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
@@ -7,6 +7,7 @@ import { TouchHandle } from "./TouchHandle";
 import { KeyboardHandle } from "./KeyboardHandle";
 import { SphericalState } from "./SphericalState";
 import { SaveState } from "./SaveState";
+import { PointerState } from "./PointerState";
 export const twoPI = 2 * Math.PI;
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
@@ -99,8 +100,7 @@ class OrbitControls extends EventDispatcher {
 
   //internal
 
-  pointers: PointerEvent[] = [];
-
+  pointerState = new PointerState();
   //
   // event handlers - FSM: listen for events and reset state
   //
@@ -108,7 +108,7 @@ class OrbitControls extends EventDispatcher {
   onPointerDown = (event: PointerEvent) => {
     if (this.enabled === false) return;
 
-    if (this.pointers.length === 0) {
+    if (this.pointerState.pointers.length === 0) {
       this.domElement?.ownerDocument.addEventListener(
         "pointermove",
         this.onPointerMove
@@ -119,11 +119,13 @@ class OrbitControls extends EventDispatcher {
       );
     }
 
-    this.addPointer(event);
+    this.pointerState.addPointer(event);
 
     if (event.pointerType === "touch") {
-      this.trackPointer(event);
-      const newState = this.touchHandle.onTouchStart(this.pointers);
+      this.pointerState.trackPointer(event);
+      const newState = this.touchHandle.onTouchStart(
+        this.pointerState.pointers
+      );
       if (newState !== undefined) {
         this.state = newState;
       }
@@ -142,10 +144,10 @@ class OrbitControls extends EventDispatcher {
     if (this.enabled === false) return;
 
     if (event.pointerType === "touch") {
-      this.trackPointer(event);
+      this.pointerState.trackPointer(event);
       const needsUpdate = this.touchHandle.onTouchMove(
         event,
-        this.pointers,
+        this.pointerState.pointers,
         this.state
       );
       if (
@@ -169,9 +171,9 @@ class OrbitControls extends EventDispatcher {
   };
 
   onPointerUp = (event: PointerEvent) => {
-    this.removePointer(event);
+    this.pointerState.removePointer(event);
 
-    if (this.pointers.length === 0) {
+    if (this.pointerState.pointers.length === 0) {
       this.domElement?.releasePointerCapture(event.pointerId);
 
       this.domElement?.ownerDocument.removeEventListener(
@@ -190,7 +192,7 @@ class OrbitControls extends EventDispatcher {
   };
 
   onPointerCancel = (event: PointerEvent) => {
-    this.removePointer(event);
+    this.pointerState.removePointer(event);
   };
 
   onMouseWheel = (event: WheelEvent) => {
@@ -225,42 +227,6 @@ class OrbitControls extends EventDispatcher {
     if (this.enabled === false) return;
     event.preventDefault();
   };
-
-  addPointer = (event: PointerEvent) => {
-    this.pointers.push(event);
-  };
-
-  pointerPositions: { [key: string]: Vector2 } = {};
-
-  removePointer(event: PointerEvent) {
-    delete this.pointerPositions[event.pointerId];
-
-    for (let i = 0; i < this.pointers.length; i++) {
-      if (this.pointers[i].pointerId == event.pointerId) {
-        this.pointers.splice(i, 1);
-        return;
-      }
-    }
-  }
-
-  trackPointer(event: PointerEvent) {
-    let position = this.pointerPositions[event.pointerId];
-
-    if (position === undefined) {
-      position = new Vector2();
-      this.pointerPositions[event.pointerId] = position;
-    }
-
-    position.set(event.pageX, event.pageY);
-  }
-
-  getSecondPointerPosition(event: PointerEvent) {
-    const pointer =
-      event.pointerId === this.pointers[0].pointerId
-        ? this.pointers[1]
-        : this.pointers[0];
-    return this.pointerPositions[pointer.pointerId];
-  }
 
   saveState: SaveState;
   reset() {

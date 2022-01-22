@@ -1,6 +1,11 @@
 import { TOUCH } from "three";
 import { OrbitControls, STATE } from "./OrbitControlsImpl";
+import { getSecondPointer } from "./PointerState";
 
+const pointerToVector = (pointer: PointerEvent) => ({
+  x: pointer.pageX,
+  y: pointer.pageY,
+});
 export class TouchHandle {
   control: OrbitControls;
 
@@ -100,17 +105,31 @@ export class TouchHandle {
   };
 
   handleTouchStartDollyPan = (pointers: PointerEvent[]) => {
-    this.dolly.handleTouchStartDolly(pointers);
+    if (this.dolly.enableZoom) {
+      const p0 = pointerToVector(pointers[0]);
+      const p1 = pointerToVector(pointers[1]);
+      this.dolly.startDollyBy2Points(p0, p1);
+    }
     this.pan.handleTouchStartPan(pointers);
   };
 
   handleTouchStartDollyRotate = (pointers: PointerEvent[]) => {
-    this.dolly.handleTouchStartDolly(pointers);
+    if (this.dolly.enableZoom) {
+      const p0 = pointerToVector(pointers[0]);
+      const p1 = pointerToVector(pointers[1]);
+      this.dolly.startDollyBy2Points(p0, p1);
+    }
     this.rotate.handleTouchStartRotate(pointers);
   };
 
   handleTouchMoveDollyPan = (event: PointerEvent, pointers: PointerEvent[]) => {
-    this.dolly.handleTouchMoveDolly(event);
+    const p0 = { x: event.pageX, y: event.pageY };
+    const pointer = getSecondPointer(event, pointers);
+    const p1 = { x: pointer.pageX, y: pointer.pageY };
+
+    if (this.dolly.enableZoom) {
+      this.dolly.moveDollyBy2Points(p0, p1);
+    }
     this.pan.handleTouchMovePan(event, pointers);
   };
 
@@ -118,7 +137,13 @@ export class TouchHandle {
     event: PointerEvent,
     pointers: PointerEvent[]
   ) => {
-    this.dolly.handleTouchMoveDolly(event);
+    const p0 = { x: event.pageX, y: event.pageY };
+    const pointer = getSecondPointer(event, pointers);
+    const p1 = { x: pointer.pageX, y: pointer.pageY };
+
+    if (this.dolly.enableZoom) {
+      this.dolly.moveDollyBy2Points(p0, p1);
+    }
     this.rotate.handleTouchMoveRotate(event, pointers);
   };
 }

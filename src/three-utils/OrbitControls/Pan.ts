@@ -29,6 +29,9 @@ export class Pan {
   get target() {
     return this.control.target;
   }
+  get pointerState() {
+    return this.control.pointerState;
+  }
 
   constructor(control: OrbitControls) {
     this.control = control;
@@ -124,7 +127,7 @@ export class Pan {
     if (pointers.length == 1) {
       this.panEnd.set(event.pageX, event.pageY);
     } else {
-      const position = this.control.getSecondPointerPosition(event);
+      const position = this.pointerState.getSecondPointerPosition(event);
       const x = 0.5 * (event.pageX + position.x);
       const y = 0.5 * (event.pageY + position.y);
       this.panEnd.set(x, y);

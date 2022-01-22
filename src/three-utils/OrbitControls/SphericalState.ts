@@ -28,7 +28,7 @@ export class SphericalState {
 
     // so camera.up is the orbit axis
     this.quat = new Quaternion().setFromUnitVectors(
-      this.control.object.up,
+      control.object.up,
       new Vector3(0, 1, 0)
     );
     this.quatInverse = this.quat.clone().invert();
@@ -115,14 +115,14 @@ export class SphericalState {
     return this.spherical.theta;
   }
 
+  // setterは呼ばれたらcontrol.updateされないといけないかも
+  // でもupdateループ回ってたらよくね？という気持ちもある
   public setPolarAngle(value: number) {
     setPolarAngle(this, value);
-    this.control.update();
   }
 
   public setAzimuthalAngle(value: number) {
     setAzimuthalAngle(this, value);
-    this.control.update();
   }
 }
 

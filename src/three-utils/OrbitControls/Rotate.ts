@@ -12,6 +12,10 @@ export class Rotate {
   get sphericalDelta() {
     return this.control.sphericalState.sphericalDelta;
   }
+  get pointerState() {
+    return this.control.pointerState;
+  }
+
   constructor(control: OrbitControls) {
     this.control = control;
   }
@@ -69,7 +73,7 @@ export class Rotate {
     if (pointers.length == 1) {
       this.rotateEnd.set(event.pageX, event.pageY);
     } else {
-      const position = this.control.getSecondPointerPosition(event);
+      const position = this.pointerState.getSecondPointerPosition(event);
       const x = 0.5 * (event.pageX + position.x);
       const y = 0.5 * (event.pageY + position.y);
       this.rotateEnd.set(x, y);
@@ -84,4 +88,15 @@ export class Rotate {
     }
     this.copyEndToStart();
   };
+
+  handleMove(x: number, y: number) {
+    this.rotateEnd.set(x, y);
+    this.multiplyDelta();
+
+    const element = this.control.domElement;
+    if (element) {
+      this.rotateRelativeToElementHeight(element.clientHeight);
+    }
+    this.copyEndToStart();
+  }
 }

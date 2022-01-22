@@ -28,6 +28,9 @@ export class Dolly {
   }
 
   control: OrbitControls;
+  get pointerState() {
+    return this.control.pointerState;
+  }
   constructor(control: OrbitControls) {
     this.control = control;
   }
@@ -94,22 +97,23 @@ export class Dolly {
     }
   };
 
-  handleTouchStartDolly = (pointers: PointerEvent[]) => {
-    if (!this.enableZoom) return;
-
-    const dx = pointers[0].pageX - pointers[1].pageX;
-    const dy = pointers[0].pageY - pointers[1].pageY;
+  startDollyBy2Points(
+    p0: { x: number; y: number },
+    p1: { x: number; y: number }
+  ) {
+    const dx = p0.x - p1.x;
+    const dy = p0.y - p1.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
     this.dollyStart.set(0, distance);
-  };
+  }
 
-  handleTouchMoveDolly = (event: PointerEvent) => {
-    if (!this.enableZoom) return;
-
-    const position = this.control.getSecondPointerPosition(event);
-    const dx = event.pageX - position.x;
-    const dy = event.pageY - position.y;
+  moveDollyBy2Points(
+    p0: { x: number; y: number },
+    p1: { x: number; y: number }
+  ) {
+    const dx = p0.x - p1.x;
+    const dy = p0.y - p1.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
     this.dollyEnd.set(0, distance);
@@ -119,7 +123,7 @@ export class Dolly {
     );
     this.dollyOut(this.dollyDelta.y);
     this.dollyStart.copy(this.dollyEnd);
-  };
+  }
 
   handleMove(x: number, y: number) {
     this.dollyEnd.set(x, y);

@@ -1,5 +1,8 @@
 import { MOUSE } from "three";
-import { OrbitControls, STATE } from "./OrbitControlsImpl";
+import { STATE } from "./OrbitControlsImpl";
+import { Dolly } from "./Dolly";
+import { Rotate } from "./Rotate";
+import { Pan } from "./Pan";
 
 function getMouseActionFromButton(
   mouseButtons: MouseHandle["mouseButtons"],
@@ -20,6 +23,8 @@ function getMouseActionFromButton(
   }
 }
 
+type Control = { dolly: Dolly; rotate: Rotate; pan: Pan };
+
 export class MouseHandle {
   // Mouse buttons
   mouseButtons = {
@@ -28,7 +33,7 @@ export class MouseHandle {
     RIGHT: MOUSE.PAN,
   };
 
-  control: OrbitControls;
+  control: Control;
   get dolly() {
     return this.control.dolly;
   }
@@ -38,7 +43,7 @@ export class MouseHandle {
   get pan() {
     return this.control.pan;
   }
-  constructor(control: OrbitControls) {
+  constructor(control: Control) {
     this.control = control;
   }
   onMouseDown = (event: MouseEvent): number | undefined => {
@@ -81,20 +86,21 @@ export class MouseHandle {
   };
 
   onMouseMove = (event: MouseEvent, state: number): boolean => {
+    const pos = [event.clientX, event.clientY] as const;
     switch (state) {
       case STATE.ROTATE:
         if (this.rotate.enableRotate === false) return false;
-        this.handleMouseMoveRotate(event);
+        this.rotate.handleMove(...pos);
         return true;
 
       case STATE.DOLLY:
         if (this.dolly.enableZoom === false) return false;
-        this.handleMouseMoveDolly(event);
+        this.dolly.handleMove(...pos);
         return true;
 
       case STATE.PAN:
         if (this.pan.enablePan === false) return false;
-        this.handleMouseMovePan(event);
+        this.pan.handleMove(...pos);
         return true;
     }
     return false;
@@ -114,24 +120,5 @@ export class MouseHandle {
 
   handleMouseDownPan = (event: MouseEvent) => {
     this.pan.panStart.set(event.clientX, event.clientY);
-  };
-
-  handleMouseMoveRotate = (event: MouseEvent) => {
-    this.rotate.rotateEnd.set(event.clientX, event.clientY);
-    this.rotate.multiplyDelta();
-
-    const element = this.control.domElement;
-    if (element) {
-      this.rotate.rotateRelativeToElementHeight(element.clientHeight);
-    }
-    this.rotate.copyEndToStart();
-  };
-
-  handleMouseMoveDolly = (event: MouseEvent) => {
-    this.dolly.handleMove(event.clientX, event.clientY);
-  };
-
-  handleMouseMovePan = (event: MouseEvent) => {
-    this.pan.handleMove(event.clientX, event.clientY);
   };
 }
