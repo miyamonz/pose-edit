@@ -119,6 +119,6 @@ export class MouseHandle {
   }
 
   handleMouseDownPan = (event: MouseEvent) => {
-    this.pan.panStart.set(event.clientX, event.clientY);
+    this.pan.setStart(event.clientX, event.clientY);
   };
 }

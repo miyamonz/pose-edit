@@ -38,7 +38,7 @@ export class TouchHandle {
 
           case TOUCH.PAN:
             if (this.pan.enablePan === false) return;
-            this.pan.handleTouchStartPan(pointers);
+            this.pan.setStart(...pos);
             return STATE.TOUCH_PAN;
 
           default:
@@ -92,11 +92,13 @@ export class TouchHandle {
         return true;
 
       case STATE.TOUCH_PAN:
+        // pointer lengthが1
         if (this.pan.enablePan === false) return false;
-        this.pan.handleTouchMovePan(event, pointers);
+        this.pan.handleMove(event.pageX, event.pageY);
         return true;
 
       case STATE.TOUCH_DOLLY_PAN:
+        // pointer lengthが2
         if (this.dolly.enableZoom === false && this.pan.enablePan === false)
           return false;
         this.handleTouchMoveDollyPan(event, pointers);
@@ -116,41 +118,37 @@ export class TouchHandle {
   };
 
   handleTouchStartDollyPan = (pointers: PointerEvent[]) => {
-    if (this.dolly.enableZoom) {
-      const p0 = pointerToVector(pointers[0]);
-      const p1 = pointerToVector(pointers[1]);
-      this.dolly.startDollyBy2Points(p0, p1);
-    }
-    this.pan.handleTouchStartPan(pointers);
+    const p0 = pointerToVector(pointers[0]);
+    const p1 = pointerToVector(pointers[1]);
+    this.dolly.startDollyBy2Points(p0, p1);
+
+    const x = 0.5 * (p0.x + p1.x);
+    const y = 0.5 * (p0.y + p1.y);
+    this.pan.setStart(x, y);
   };
 
   handleTouchMoveDollyPan = (event: PointerEvent, pointers: PointerEvent[]) => {
-    const p0 = { x: event.pageX, y: event.pageY };
+    const p0 = pointerToVector(event);
     const pointer = getSecondPointer(event, pointers);
-    const p1 = { x: pointer.pageX, y: pointer.pageY };
+    const p1 = pointerToVector(pointer);
+    this.dolly.moveDollyBy2Points(p0, p1);
 
-    if (this.dolly.enableZoom) {
-      this.dolly.moveDollyBy2Points(p0, p1);
-    }
-    this.pan.handleTouchMovePan(event, pointers);
+    const x = 0.5 * (p0.x + p1.x);
+    const y = 0.5 * (p0.y + p1.y);
+    this.pan.handleMove(x, y);
   };
 
   handleTouchMoveDollyRotate = (
     event: PointerEvent,
     pointers: PointerEvent[]
   ) => {
-    const p0 = { x: event.pageX, y: event.pageY };
+    const p0 = pointerToVector(event);
     const pointer = getSecondPointer(event, pointers);
-    const p1 = { x: pointer.pageX, y: pointer.pageY };
+    const p1 = pointerToVector(pointer);
+    this.dolly.moveDollyBy2Points(p0, p1);
 
-    if (this.dolly.enableZoom) {
-      this.dolly.moveDollyBy2Points(p0, p1);
-    }
-
-    if (this.rotate.enableRotate) {
-      const x = 0.5 * (p0.x + p1.x);
-      const y = 0.5 * (p0.y + p1.y);
-      this.rotate.handleMove(x, y);
-    }
+    const x = 0.5 * (p0.x + p1.x);
+    const y = 0.5 * (p0.y + p1.y);
+    this.rotate.handleMove(x, y);
   };
 }

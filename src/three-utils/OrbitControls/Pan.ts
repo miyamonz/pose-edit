@@ -107,37 +107,9 @@ export class Pan {
 
   // handlers
 
-  handleTouchStartPan = (pointers: PointerEvent[]) => {
-    if (!this.enablePan) return;
-
-    if (pointers.length == 1) {
-      this.panStart.set(pointers[0].pageX, pointers[0].pageY);
-    } else {
-      const x = 0.5 * (pointers[0].pageX + pointers[1].pageX);
-      const y = 0.5 * (pointers[0].pageY + pointers[1].pageY);
-
-      this.panStart.set(x, y);
-    }
-  };
-  handleTouchMovePan = (event: PointerEvent, pointers: PointerEvent[]) => {
-    if (!this.enablePan) return;
-
-    function getPos(): readonly [number, number] {
-      const p0 = [event.pageX, event.pageY] as const;
-      if (pointers.length == 1) {
-        return p0;
-      } else {
-        const pointer = getSecondPointer(event, pointers);
-        const position = { x: pointer.pageX, y: pointer.pageY };
-
-        const x = 0.5 * (p0[0] + position.x);
-        const y = 0.5 * (p0[1] + position.y);
-        return [x, y] as const;
-      }
-    }
-
-    this.handleMove(...getPos());
-  };
+  setStart(x: number, y: number) {
+    this.panStart.set(x, y);
+  }
 
   handleMove(x: number, y: number) {
     this.panEnd.set(x, y);
