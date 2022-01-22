@@ -1,27 +1,38 @@
 import { Vector2 } from "three";
 import { OrbitControls } from "./OrbitControlsImpl";
-import { getSecondPointer } from "./PointerState";
 
 export class Rotate {
   control: OrbitControls;
 
   rotateSpeed = 1.0;
-  rotateStart = new Vector2();
-  rotateEnd = new Vector2();
-  rotateDelta = new Vector2();
+  private rotateStart = new Vector2();
+  private rotateEnd = new Vector2();
+  private rotateDelta = new Vector2();
 
   get sphericalDelta() {
     return this.control.sphericalState.sphericalDelta;
   }
 
-  constructor(control: OrbitControls) {
+  vectorMapper: (
+    x: number,
+    y: number
+  ) => readonly [leftAngle: number, upAngle: number];
+
+  constructor(
+    control: OrbitControls,
+    vectorMapper?: (
+      x: number,
+      y: number
+    ) => readonly [leftAngle: number, upAngle: number]
+  ) {
     this.control = control;
-  }
-  rotateLeft(angle: number): void {
-    this.sphericalDelta.theta -= angle;
+    this.vectorMapper = vectorMapper ?? ((x, y) => [x, y]);
   }
 
-  rotateUp(angle: number): void {
+  private rotateLeft(angle: number): void {
+    this.sphericalDelta.theta -= angle;
+  }
+  private rotateUp(angle: number): void {
     this.sphericalDelta.phi -= angle;
   }
 
@@ -39,50 +50,22 @@ export class Rotate {
   enableRotate = true;
 
   //handlers
-  handleTouchStartRotate = (pointers: PointerEvent[]) => {
-    if (!this.enableRotate) return;
-
-    if (pointers.length == 1) {
-      this.rotateStart.set(pointers[0].pageX, pointers[0].pageY);
-    } else {
-      const x = 0.5 * (pointers[0].pageX + pointers[1].pageX);
-      const y = 0.5 * (pointers[0].pageY + pointers[1].pageY);
-
-      this.rotateStart.set(x, y);
-    }
-  };
-  handleTouchMoveRotate = (event: PointerEvent, pointers: PointerEvent[]) => {
-    if (!this.enableRotate) return;
-    function getPos() {
-      const p0 = [event.pageX, event.pageY] as const;
-      if (pointers.length == 1) {
-        return p0;
-      } else {
-        const pointer = getSecondPointer(event, pointers);
-        const position = { x: pointer.pageX, y: pointer.pageY };
-        const x = 0.5 * (p0[0] + position.x);
-        const y = 0.5 * (p0[1] + position.y);
-        return [x, y] as const;
-      }
-    }
-
-    this.handleMove(...getPos());
-  };
+  setStart(x: number, y: number) {
+    const [leftAngle, upAngle] = this.vectorMapper(x, y);
+    this.rotateStart.set(leftAngle, upAngle);
+  }
 
   handleMove(x: number, y: number) {
-    this.rotateEnd.set(x, y);
+    const [leftAngle, upAngle] = this.vectorMapper(x, y);
+
+    this.rotateEnd.set(leftAngle, upAngle);
     this.rotateDelta
       .subVectors(this.rotateEnd, this.rotateStart)
       .multiplyScalar(this.rotateSpeed);
 
-    const element = this.control.domElement;
-    if (element) {
-      const height = element.clientHeight;
-      // この割当はhandleMoveの呼び出し元でやればよさそうだな
-      // その場合は、handleMoveという名前じゃなくて、handleRotate(up:number, left:number)としたほうがいい
-      this.rotateLeft((2 * Math.PI * this.rotateDelta.x) / height); // yes, height
-      this.rotateUp((2 * Math.PI * this.rotateDelta.y) / height);
-    }
+    this.rotateLeft(this.rotateDelta.x);
+    this.rotateUp(this.rotateDelta.y);
+
     this.rotateStart.copy(this.rotateEnd);
   }
 }

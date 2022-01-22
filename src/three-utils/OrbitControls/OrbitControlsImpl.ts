@@ -282,7 +282,13 @@ class OrbitControls extends EventDispatcher {
     if (domElement !== undefined) this.connect(domElement);
 
     this.dolly = new Dolly(object);
-    this.rotate = new Rotate(this);
+    const mapper = (x: number, y: number) => {
+      const height = this.domElement?.clientHeight ?? 1;
+      const leftAngle = height ? (2 * Math.PI * x) / height : 0;
+      const upAngle = height ? (2 * Math.PI * y) / height : 0;
+      return [leftAngle, upAngle] as const;
+    };
+    this.rotate = new Rotate(this, mapper);
     this.pan = new Pan(this);
 
     this.sphericalState = new SphericalState(this);

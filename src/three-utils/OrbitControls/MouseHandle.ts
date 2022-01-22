@@ -111,7 +111,7 @@ export class MouseHandle {
   //
 
   handleMouseDownRotate = (event: MouseEvent) => {
-    this.rotate.rotateStart.set(event.clientX, event.clientY);
+    this.rotate.setStart(event.clientX, event.clientY);
   };
 
   handleMouseDownDolly(event: MouseEvent) {

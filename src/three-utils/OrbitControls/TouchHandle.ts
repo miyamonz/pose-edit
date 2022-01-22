@@ -29,10 +29,11 @@ export class TouchHandle {
   onTouchStart = (pointers: PointerEvent[]): number | undefined => {
     switch (pointers.length) {
       case 1:
+        const pos = [pointers[0].pageX, pointers[0].pageY] as const;
         switch (this.touches.ONE) {
           case TOUCH.ROTATE:
             if (this.rotate.enableRotate === false) return;
-            this.rotate.handleTouchStartRotate(pointers);
+            this.rotate.setStart(...pos);
             return STATE.TOUCH_ROTATE;
 
           case TOUCH.PAN:
@@ -45,6 +46,9 @@ export class TouchHandle {
         }
 
       case 2:
+        const p0 = pointerToVector(pointers[0]);
+        const p1 = pointerToVector(pointers[1]);
+
         switch (this.touches.TWO) {
           case TOUCH.DOLLY_PAN:
             if (this.dolly.enableZoom === false && this.pan.enablePan === false)
@@ -58,7 +62,12 @@ export class TouchHandle {
               this.rotate.enableRotate === false
             )
               return;
-            this.handleTouchStartDollyRotate(pointers);
+            this.dolly.startDollyBy2Points(p0, p1);
+
+            const x = 0.5 * (p0.x + p1.x);
+            const y = 0.5 * (p0.y + p1.y);
+            this.rotate.setStart(x, y);
+
             return STATE.TOUCH_DOLLY_ROTATE;
 
           default:
@@ -77,8 +86,9 @@ export class TouchHandle {
   ): boolean => {
     switch (state) {
       case STATE.TOUCH_ROTATE:
+        // ここはpointerが1つ
         if (this.rotate.enableRotate === false) return false;
-        this.rotate.handleTouchMoveRotate(event, pointers);
+        this.rotate.handleMove(event.pageX, event.pageY);
         return true;
 
       case STATE.TOUCH_PAN:
@@ -93,6 +103,7 @@ export class TouchHandle {
         return true;
 
       case STATE.TOUCH_DOLLY_ROTATE:
+        // onTouchStartでpointerが2のときにここにくるので、以降のgetSecondPointerは問題なく動く
         if (
           this.dolly.enableZoom === false &&
           this.rotate.enableRotate === false
@@ -111,15 +122,6 @@ export class TouchHandle {
       this.dolly.startDollyBy2Points(p0, p1);
     }
     this.pan.handleTouchStartPan(pointers);
-  };
-
-  handleTouchStartDollyRotate = (pointers: PointerEvent[]) => {
-    if (this.dolly.enableZoom) {
-      const p0 = pointerToVector(pointers[0]);
-      const p1 = pointerToVector(pointers[1]);
-      this.dolly.startDollyBy2Points(p0, p1);
-    }
-    this.rotate.handleTouchStartRotate(pointers);
   };
 
   handleTouchMoveDollyPan = (event: PointerEvent, pointers: PointerEvent[]) => {
@@ -144,6 +146,11 @@ export class TouchHandle {
     if (this.dolly.enableZoom) {
       this.dolly.moveDollyBy2Points(p0, p1);
     }
-    this.rotate.handleTouchMoveRotate(event, pointers);
+
+    if (this.rotate.enableRotate) {
+      const x = 0.5 * (p0.x + p1.x);
+      const y = 0.5 * (p0.y + p1.y);
+      this.rotate.handleMove(x, y);
+    }
   };
 }
