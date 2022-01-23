@@ -123,6 +123,8 @@ export class Dolly {
     this.dollyStart.copy(this.dollyEnd);
   }
 
+  // これ結局y座標だけみてるんだよな
+  // dollyStart, Endとか全部1次元で良さそうだな
   handleMove(x: number, y: number) {
     this.dollyEnd.set(x, y);
     this.dollyDelta.subVectors(this.dollyEnd, this.dollyStart);
@@ -135,6 +137,7 @@ export class Dolly {
     this.dollyStart.copy(this.dollyEnd);
   }
 
+  // 平行投影だったらcameraのzoomを変えるが、そうでなければdollyはこのscale操作ですべてやってる
   getNextFrameScale() {
     let scale = this.scale;
     this.scale = 1;
