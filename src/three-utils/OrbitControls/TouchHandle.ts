@@ -1,8 +1,7 @@
-import { TOUCH } from "three";
+import { TOUCH, Vector2 } from "three";
 import { Dolly } from "./Dolly";
 import { STATE } from "./OrbitControlsImpl";
 import { Pan } from "./Pan";
-import { getSecondPointer } from "./PointerState";
 import { Rotate } from "./Rotate";
 
 const pointerToVector = (pointer: PointerEvent) => ({
@@ -31,10 +30,10 @@ export class TouchHandle {
     this.control = control;
   }
 
-  onTouchStart = (pointers: PointerEvent[]): number | undefined => {
+  onTouchStart = (pointers: Vector2[]): number | undefined => {
     switch (pointers.length) {
       case 1:
-        const pos = [pointers[0].pageX, pointers[0].pageY] as const;
+        const pos = [pointers[0].x, pointers[0].y] as const;
         switch (this.touches.ONE) {
           case TOUCH.ROTATE:
             if (this.rotate.enableRotate === false) return;
@@ -51,8 +50,8 @@ export class TouchHandle {
         }
 
       case 2:
-        const p0 = pointerToVector(pointers[0]);
-        const p1 = pointerToVector(pointers[1]);
+        const p0 = pointers[0];
+        const p1 = pointers[1];
 
         switch (this.touches.TWO) {
           case TOUCH.DOLLY_PAN:
@@ -86,7 +85,7 @@ export class TouchHandle {
 
   onTouchMove = (
     event: PointerEvent,
-    pointers: PointerEvent[],
+    pointers: Vector2[],
     state: number
   ): boolean => {
     switch (state) {
@@ -122,9 +121,9 @@ export class TouchHandle {
     return false;
   };
 
-  handleTouchStartDollyPan = (pointers: PointerEvent[]) => {
-    const p0 = pointerToVector(pointers[0]);
-    const p1 = pointerToVector(pointers[1]);
+  handleTouchStartDollyPan = (pointers: Vector2[]) => {
+    const p0 = pointers[0];
+    const p1 = pointers[1];
     this.dolly.startDollyBy2Points(p0, p1);
 
     const x = 0.5 * (p0.x + p1.x);
@@ -132,10 +131,12 @@ export class TouchHandle {
     this.pan.setStart(x, y);
   };
 
-  handleTouchMoveDollyPan = (event: PointerEvent, pointers: PointerEvent[]) => {
-    const p0 = pointerToVector(event);
-    const pointer = getSecondPointer(event, pointers);
-    const p1 = pointerToVector(pointer);
+  handleTouchMoveDollyPan = (event: PointerEvent, pointers: Vector2[]) => {
+    // const p0 = pointerToVector(event);
+    // const pointer = getSecondPointer(event, pointers);
+    // const p1 = pointerToVector(pointer);
+    const p0 = pointers[0];
+    const p1 = pointers[1];
     this.dolly.moveDollyBy2Points(p0, p1);
 
     const x = 0.5 * (p0.x + p1.x);
@@ -143,13 +144,12 @@ export class TouchHandle {
     this.pan.handleMove(x, y);
   };
 
-  handleTouchMoveDollyRotate = (
-    event: PointerEvent,
-    pointers: PointerEvent[]
-  ) => {
-    const p0 = pointerToVector(event);
-    const pointer = getSecondPointer(event, pointers);
-    const p1 = pointerToVector(pointer);
+  handleTouchMoveDollyRotate = (event: PointerEvent, pointers: Vector2[]) => {
+    // const p0 = pointerToVector(event);
+    // const pointer = getSecondPointer(event, pointers);
+    // const p1 = pointerToVector(pointer);
+    const p0 = pointers[0];
+    const p1 = pointers[1];
     this.dolly.moveDollyBy2Points(p0, p1);
 
     const x = 0.5 * (p0.x + p1.x);

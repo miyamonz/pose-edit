@@ -8,7 +8,6 @@ import { KeyboardHandle } from "./KeyboardHandle";
 import { SphericalState } from "./SphericalState";
 import { SaveState } from "./SaveState";
 import { PointerState } from "./PointerState";
-export const twoPI = 2 * Math.PI;
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
@@ -17,8 +16,6 @@ export const twoPI = 2 * Math.PI;
 //    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
 //    Pan - right mouse, or left mouse + ctrl/meta/shiftKey, or arrow keys / touch: two-finger move
 
-export const moduloWrapAround = (offset: number, capacity: number) =>
-  ((offset % capacity) + capacity) % capacity;
 
 const changeEvent = { type: "change" };
 const startEvent = { type: "start" };
@@ -108,6 +105,7 @@ class OrbitControls extends EventDispatcher {
   onPointerDown = (event: PointerEvent) => {
     if (this.enabled === false) return;
 
+    // pointerが新規のときはlistenerを追加
     if (this.pointerState.pointers.length === 0) {
       this.domElement?.ownerDocument.addEventListener(
         "pointermove",
@@ -124,7 +122,7 @@ class OrbitControls extends EventDispatcher {
     if (event.pointerType === "touch") {
       this.pointerState.trackPointer(event);
       const newState = this.touchHandle.onTouchStart(
-        this.pointerState.pointers
+        this.pointerState.pointerVecs
       );
       if (newState !== undefined) {
         this.state = newState;
@@ -147,9 +145,10 @@ class OrbitControls extends EventDispatcher {
       this.pointerState.trackPointer(event);
       const needsUpdate = this.touchHandle.onTouchMove(
         event,
-        this.pointerState.pointers,
+        this.pointerState.pointerVecs,
         this.state
       );
+      // 現状のステートがタッチ系統じゃないならNONEに戻す
       if (
         ![
           STATE.TOUCH_ROTATE,
@@ -188,6 +187,7 @@ class OrbitControls extends EventDispatcher {
 
     this.dispatchEvent(endEvent);
 
+    //これ正しいか？touchデバイスで複数の指のうち一つを離したら止まるという挙動になる
     this.state = STATE.NONE;
   };
 
@@ -239,9 +239,13 @@ class OrbitControls extends EventDispatcher {
   tmp: Vector3 = new Vector3();
   // this method is exposed, but perhaps it would be better if we can make it private...
   update = () => {
+    //現状のoffsetをsphericalStateに反映
     const offset = this.tmp.copy(this.object.position).sub(this.target);
+    this.sphericalState.allignSpherical(offset);
 
     // move target to panned location
+    // panはtargetを動かしてるだけなのか
+    // updateObjectTransformで、cameraのpositionはtarget + offsetになってるからそこでカメラも一緒に平行移動する
     this.pan.update(this.target);
 
     // rotate
@@ -249,7 +253,10 @@ class OrbitControls extends EventDispatcher {
       this.rotate.updateAutoRotate();
     }
 
-    this.rotate.update(offset, this.object, this.target);
+    //dolly
+    this.sphericalState.spherical.radius *= this.dolly.getNextFrameScale();
+
+    this.sphericalState.updateObjectTransform(this.object, this.target);
 
     // dollyはOrbitControlsにおいては、cameraのzoomを変更することを意味する
     // なので、特にupdate()を呼び出す必要はない
@@ -267,6 +274,7 @@ class OrbitControls extends EventDispatcher {
   dolly: Dolly;
   rotate: Rotate;
   pan: Pan;
+  sphericalState: SphericalState;
 
   constructor(object: Camera, domElement?: HTMLElement) {
     super();
@@ -280,9 +288,9 @@ class OrbitControls extends EventDispatcher {
     // connect events
     if (domElement !== undefined) this.connect(domElement);
 
-    const dolly = new Dolly(object);
+    const sphericalState = new SphericalState(object);
 
-    const sphericalState = new SphericalState(dolly, object);
+    const dolly = new Dolly(object, sphericalState);
     const mapper = (x: number, y: number) => {
       const height = this.domElement?.clientHeight ?? 1;
       const leftAngle = height ? (2 * Math.PI * x) / height : 0;
@@ -305,6 +313,7 @@ class OrbitControls extends EventDispatcher {
     this.dolly = dolly;
     this.rotate = rotate;
     this.pan = pan;
+    this.sphericalState = sphericalState;
 
     // force an update at start
     this.update();

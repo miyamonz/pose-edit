@@ -18,6 +18,7 @@ export class Pan {
   screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
   keyPanSpeed = 7.0; // pixels moved per arrow key push
 
+  // これがtargetに対するtargetDeltaみたいな役割を持ってる
   private panOffset = new Vector3();
 
   private panStart = new Vector2();
@@ -41,6 +42,8 @@ export class Pan {
   }
 
   private v = new Vector3();
+  // 欲を言えば、カメラの都合に関わるmappingの部分は外から注入できると嬉しいのだが
+  // そうすればpanが依存するのはupdate時のtargetだけになる
   // deltaX and deltaY are in pixels; right and down are positive
   pan = (deltaX: number, deltaY: number) => {
     const element = this.domElement;

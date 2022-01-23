@@ -6,6 +6,7 @@ import {
   Vector2,
   Vector3,
 } from "three";
+import { SphericalState } from "./SphericalState";
 
 const EPS = 0.000001;
 
@@ -28,8 +29,10 @@ export class Dolly {
   }
 
   object: Camera;
-  constructor(object: Camera) {
+  sphericalState: SphericalState;
+  constructor(object: Camera, sphericalState: SphericalState) {
     this.object = object;
+    this.sphericalState = sphericalState;
   }
 
   scale = 1;
@@ -123,7 +126,6 @@ export class Dolly {
   handleMove(x: number, y: number) {
     this.dollyEnd.set(x, y);
     this.dollyDelta.subVectors(this.dollyEnd, this.dollyStart);
-
     if (this.dollyDelta.y > 0) {
       this.dollyOut(this.getZoomScale());
     } else if (this.dollyDelta.y < 0) {

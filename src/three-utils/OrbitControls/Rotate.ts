@@ -9,10 +9,6 @@ export class Rotate {
   private rotateEnd = new Vector2();
   private rotateDelta = new Vector2();
 
-  get sphericalDelta() {
-    return this.sphericalState.sphericalDelta;
-  }
-
   vectorMapper: (
     x: number,
     y: number
@@ -30,10 +26,10 @@ export class Rotate {
   }
 
   private rotateLeft(angle: number): void {
-    this.sphericalDelta.theta -= angle;
+    this.sphericalState.sphericalDelta.theta -= angle;
   }
   private rotateUp(angle: number): void {
-    this.sphericalDelta.phi -= angle;
+    this.sphericalState.sphericalDelta.phi -= angle;
   }
 
   // If auto-rotate is enabled, you must call controls.update() in your animation loop
@@ -67,10 +63,5 @@ export class Rotate {
     this.rotateUp(this.rotateDelta.y);
 
     this.rotateStart.copy(this.rotateEnd);
-  }
-
-  update(offset: Vector3, object: Camera, target: Vector3) {
-    this.sphericalState.allignSpherical(offset);
-    this.sphericalState.updateObjectTransform(object, target);
   }
 }

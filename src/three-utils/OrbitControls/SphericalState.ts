@@ -1,6 +1,8 @@
 import { Camera, Quaternion, Spherical, Vector3 } from "three";
-import { Dolly } from "./Dolly";
-import { OrbitControls, moduloWrapAround, twoPI } from "./OrbitControlsImpl";
+
+const twoPI = 2 * Math.PI;
+const moduloWrapAround = (offset: number, capacity: number) =>
+  ((offset % capacity) + capacity) % capacity;
 
 export class SphericalState {
   // How far you can dolly in and out ( PerspectiveCamera only )
@@ -20,11 +22,8 @@ export class SphericalState {
   spherical = new Spherical();
   sphericalDelta = new Spherical();
 
-  dolly: Dolly;
-
-  constructor(dolly: Dolly, object: Camera) {
-    this.dolly = dolly;
-
+  //初期化時のcameraへの依存は、up方向を見るだけだな
+  constructor(object: Camera) {
     // so camera.up is the orbit axis
     this.quat = new Quaternion().setFromUnitVectors(
       object.up,
@@ -34,6 +33,7 @@ export class SphericalState {
   }
 
   private restrictAngle() {
+    // theta
     // restrict theta to be between desired limits
     let min = this.minAzimuthAngle;
     let max = this.maxAzimuthAngle;
@@ -41,14 +41,15 @@ export class SphericalState {
       this.spherical.theta = restrictTheta(min, max, this.spherical.theta);
     }
 
+    // phi
     // restrict phi to be between desired limits
     this.spherical.phi = Math.max(
       this.minPolarAngle,
       Math.min(this.maxPolarAngle, this.spherical.phi)
     );
     this.spherical.makeSafe();
-    this.spherical.radius *= this.dolly.getNextFrameScale();
 
+    //radius
     // restrict radius to be between desired limits
     this.spherical.radius = Math.max(
       this.minDistance,
