@@ -55,7 +55,7 @@ export class MouseHandle {
     switch (mouseAction) {
       case MOUSE.DOLLY:
         if (this.dolly.enableZoom === false) return;
-        this.handleMouseDownDolly(event);
+        this.dolly.setStart(event.clientX, event.clientY);
         return STATE.DOLLY;
 
       case MOUSE.ROTATE:
@@ -95,7 +95,8 @@ export class MouseHandle {
 
       case STATE.DOLLY:
         if (this.dolly.enableZoom === false) return false;
-        this.dolly.handleMove(...pos);
+        // dolly by y axis
+        this.dolly.handleMove(pos[1]);
         return true;
 
       case STATE.PAN:
@@ -115,7 +116,7 @@ export class MouseHandle {
   };
 
   handleMouseDownDolly(event: MouseEvent) {
-    this.dolly.dollyStart.set(event.clientX, event.clientY);
+    this.dolly.setStart(event.clientX, event.clientY);
   }
 
   handleMouseDownPan = (event: MouseEvent) => {

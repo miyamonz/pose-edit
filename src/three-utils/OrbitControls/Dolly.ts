@@ -3,7 +3,6 @@ import {
   OrthographicCamera,
   PerspectiveCamera,
   Quaternion,
-  Vector2,
   Vector3,
 } from "three";
 import { SphericalState } from "./SphericalState";
@@ -11,10 +10,6 @@ import { SphericalState } from "./SphericalState";
 const EPS = 0.000001;
 
 export class Dolly {
-  dollyStart = new Vector2();
-  dollyEnd = new Vector2();
-  dollyDelta = new Vector2();
-
   // How far you can zoom in and out ( OrthographicCamera only )
   minZoom = 0;
   maxZoom = Infinity;
@@ -61,27 +56,7 @@ export class Dolly {
   }
 
   dollyIn(dollyScale: number) {
-    if (
-      this.object instanceof PerspectiveCamera &&
-      this.object.isPerspectiveCamera
-    ) {
-      this.scale *= dollyScale;
-    } else if (
-      this.object instanceof OrthographicCamera &&
-      this.object.isOrthographicCamera
-    ) {
-      this.object.zoom = Math.max(
-        this.minZoom,
-        Math.min(this.maxZoom, this.object.zoom / dollyScale)
-      );
-      this.object.updateProjectionMatrix();
-      this.zoomChanged = true;
-    } else {
-      console.warn(
-        "WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled."
-      );
-      this.enableZoom = false;
-    }
+    this.dollyOut(1 / dollyScale);
   }
 
   //handlers
@@ -93,48 +68,38 @@ export class Dolly {
     }
   };
 
-  //TODO: distanceを外から代入する
-
-  startDollyBy2Points(
-    p0: { x: number; y: number },
-    p1: { x: number; y: number }
-  ) {
-    const dx = p0.x - p1.x;
-    const dy = p0.y - p1.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    this.dollyStart.set(0, distance);
+  setStart(x: number, y: number) {
+    this.start = y;
   }
 
-  moveDollyBy2Points(
-    p0: { x: number; y: number },
-    p1: { x: number; y: number }
-  ) {
-    const dx = p0.x - p1.x;
-    const dy = p0.y - p1.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    this.dollyEnd.set(0, distance);
-    this.dollyDelta.set(
-      0,
-      Math.pow(this.dollyEnd.y / this.dollyStart.y, this.zoomSpeed)
-    );
-    this.dollyOut(this.dollyDelta.y);
-    this.dollyStart.copy(this.dollyEnd);
+  startDollyByDistance(distance: number) {
+    this.start = distance;
   }
 
-  // これ結局y座標だけみてるんだよな
-  // dollyStart, Endとか全部1次元で良さそうだな
-  handleMove(x: number, y: number) {
-    this.dollyEnd.set(x, y);
-    this.dollyDelta.subVectors(this.dollyEnd, this.dollyStart);
-    if (this.dollyDelta.y > 0) {
+  // これと１つ下の２つのmethodは、入力に対してどういうふうにzoomをするのかという利用側のロジックが入ってしまっている
+  dollyByDistance(distance: number) {
+    const [prev, next] = this.diff(distance);
+
+    const deltaY = Math.pow(next / prev, this.zoomSpeed);
+    this.dollyOut(deltaY);
+  }
+
+  handleMove(y: number) {
+    const [prev, next] = this.diff(y);
+
+    const deltaY = next - prev;
+    if (deltaY > 0) {
       this.dollyOut(this.getZoomScale());
-    } else if (this.dollyDelta.y < 0) {
+    } else if (deltaY < 0) {
       this.dollyIn(this.getZoomScale());
     }
+  }
 
-    this.dollyStart.copy(this.dollyEnd);
+  private start = 0;
+  private diff(v: number) {
+    const [prev, next] = [this.start, v];
+    this.start = next;
+    return [prev, next];
   }
 
   // 平行投影だったらcameraのzoomを変えるが、そうでなければdollyはこのscale操作ですべてやってる

@@ -66,7 +66,8 @@ export class TouchHandle {
               this.rotate.enableRotate === false
             )
               return;
-            this.dolly.startDollyBy2Points(p0, p1);
+            const distance = Math.hypot(p0.x - p1.x, p0.y - p1.y);
+            this.dolly.startDollyByDistance(distance);
 
             const x = 0.5 * (p0.x + p1.x);
             const y = 0.5 * (p0.y + p1.y);
@@ -124,7 +125,8 @@ export class TouchHandle {
   handleTouchStartDollyPan = (pointers: Vector2[]) => {
     const p0 = pointers[0];
     const p1 = pointers[1];
-    this.dolly.startDollyBy2Points(p0, p1);
+    const distance = Math.hypot(p0.x - p1.x, p0.y - p1.y);
+    this.dolly.startDollyByDistance(distance);
 
     const x = 0.5 * (p0.x + p1.x);
     const y = 0.5 * (p0.y + p1.y);
@@ -137,7 +139,8 @@ export class TouchHandle {
     // const p1 = pointerToVector(pointer);
     const p0 = pointers[0];
     const p1 = pointers[1];
-    this.dolly.moveDollyBy2Points(p0, p1);
+    const distance = Math.hypot(p0.x - p1.x, p0.y - p1.y);
+    this.dolly.dollyByDistance(distance);
 
     const x = 0.5 * (p0.x + p1.x);
     const y = 0.5 * (p0.y + p1.y);
@@ -150,7 +153,8 @@ export class TouchHandle {
     // const p1 = pointerToVector(pointer);
     const p0 = pointers[0];
     const p1 = pointers[1];
-    this.dolly.moveDollyBy2Points(p0, p1);
+    const distance = Math.hypot(p0.x - p1.x, p0.y - p1.y);
+    this.dolly.dollyByDistance(distance);
 
     const x = 0.5 * (p0.x + p1.x);
     const y = 0.5 * (p0.y + p1.y);
