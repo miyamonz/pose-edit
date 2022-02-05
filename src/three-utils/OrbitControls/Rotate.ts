@@ -1,4 +1,4 @@
-import { Vector2, Vector3, Camera } from "three";
+import { Vector2 } from "three";
 import { SphericalState } from "./SphericalState";
 
 export class Rotate {
@@ -54,14 +54,18 @@ export class Rotate {
   handleMove(x: number, y: number) {
     const [leftAngle, upAngle] = this.vectorMapper(x, y);
 
-    this.rotateEnd.set(leftAngle, upAngle);
+    const delta = this.getDelta(leftAngle, upAngle);
+    this.rotateLeft(delta.x);
+    this.rotateUp(delta.y);
+  }
+
+  private getDelta(x: number, y: number): Vector2 {
+    this.rotateEnd.set(x, y);
     this.rotateDelta
       .subVectors(this.rotateEnd, this.rotateStart)
       .multiplyScalar(this.rotateSpeed);
-
-    this.rotateLeft(this.rotateDelta.x);
-    this.rotateUp(this.rotateDelta.y);
-
     this.rotateStart.copy(this.rotateEnd);
+
+    return this.rotateDelta;
   }
 }
