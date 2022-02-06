@@ -19,7 +19,7 @@ export class Pan {
   keyPanSpeed = 7.0; // pixels moved per arrow key push
 
   // これがtargetに対するtargetDeltaみたいな役割を持ってる
-  private panOffset = new Vector3();
+  panOffset = new Vector3();
 
   private panStart = new Vector2();
   private panEnd = new Vector2();
@@ -54,8 +54,8 @@ export class Pan {
       this.object.isPerspectiveCamera
     ) {
       // perspective
-      this.v.copy(this.object.position).sub(this.target);
-      let targetDistance = this.v.length();
+      const offset = this.v.copy(this.object.position).sub(this.target);
+      let targetDistance = offset.length();
 
       // half of the fov is center to top of screen
       targetDistance *= Math.tan(((this.object.fov / 2) * Math.PI) / 180.0);
@@ -97,20 +97,21 @@ export class Pan {
   };
 
   private panLeft = (distance: number, objectMatrix: Matrix4) => {
-    this.v.setFromMatrixColumn(objectMatrix, 0); // get X column of objectMatrix
-    this.v.multiplyScalar(-distance);
-    this.panOffset.add(this.v);
+    const v = this.v.setFromMatrixColumn(objectMatrix, 0); // get X column of objectMatrix
+    v.multiplyScalar(-distance);
+    this.panOffset.add(v);
   };
 
   private panUp = (distance: number, objectMatrix: Matrix4) => {
+    const v = this.v;
     if (this.screenSpacePanning === true) {
-      this.v.setFromMatrixColumn(objectMatrix, 1);
+      v.setFromMatrixColumn(objectMatrix, 1);
     } else {
-      this.v.setFromMatrixColumn(objectMatrix, 0);
-      this.v.crossVectors(this.object.up, this.v);
+      v.setFromMatrixColumn(objectMatrix, 0);
+      v.crossVectors(this.object.up, v);
     }
-    this.v.multiplyScalar(distance);
-    this.panOffset.add(this.v);
+    v.multiplyScalar(distance);
+    this.panOffset.add(v);
   };
 
   // handlers
@@ -127,19 +128,23 @@ export class Pan {
     this.pan(this.panDelta.x, this.panDelta.y);
     this.panStart.copy(this.panEnd);
   }
+}
 
+export class Damping {
   enableDamping = true;
-  dampingFactor = 0.05;
+  dampingFactor: number;
 
-  // update
-  update(target: Vector3) {
+  constructor(dampingFactor: number) {
+    this.dampingFactor = dampingFactor;
+  }
+  update(target: Vector3, offset: Vector3) {
     const dampingFactor = this.dampingFactor;
     if (this.enableDamping === true) {
-      target.addScaledVector(this.panOffset, dampingFactor);
-      this.panOffset.multiplyScalar(1 - dampingFactor);
+      target.addScaledVector(offset, dampingFactor);
+      offset.multiplyScalar(1 - dampingFactor);
     } else {
-      target.add(this.panOffset);
-      this.panOffset.set(0, 0, 0);
+      target.add(offset);
+      offset.set(0, 0, 0);
     }
   }
 }

@@ -2,7 +2,7 @@ import { Camera, EventDispatcher, Vector3 } from "three";
 import { Dolly } from "./Dolly";
 import { Rotate } from "./Rotate";
 import { MouseHandle } from "./MouseHandle";
-import { Pan } from "./Pan";
+import { Pan, Damping } from "./Pan";
 import { TouchHandle } from "./TouchHandle";
 import { KeyboardHandle } from "./KeyboardHandle";
 import { SphericalState } from "./SphericalState";
@@ -15,7 +15,6 @@ import { PointerState } from "./PointerState";
 //    Orbit - left mouse / touch: one-finger move
 //    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
 //    Pan - right mouse, or left mouse + ctrl/meta/shiftKey, or arrow keys / touch: two-finger move
-
 
 const changeEvent = { type: "change" };
 const startEvent = { type: "start" };
@@ -246,7 +245,7 @@ class OrbitControls extends EventDispatcher {
     // move target to panned location
     // panはtargetを動かしてるだけなのか
     // updateObjectTransformで、cameraのpositionはtarget + offsetになってるからそこでカメラも一緒に平行移動する
-    this.pan.update(this.target);
+    this.panDamping.update(this.target, this.pan.panOffset);
 
     // rotate
     if (this.state === STATE.NONE) {
@@ -274,6 +273,7 @@ class OrbitControls extends EventDispatcher {
   dolly: Dolly;
   rotate: Rotate;
   pan: Pan;
+  panDamping = new Damping(0.05);
   sphericalState: SphericalState;
 
   constructor(object: Camera, domElement?: HTMLElement) {
