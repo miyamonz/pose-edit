@@ -8,7 +8,7 @@ import { useTurntable } from "./useTurntable";
 import { useController, useXR } from "@react-three/xr";
 import { useFrame } from "@react-three/fiber";
 
-import { OrbitControls } from "../three-utils/OrbitControls";
+import { useOrbitControls } from "../three-utils/OrbitControls";
 function App() {
   return (
     <AppCanvas>
@@ -46,6 +46,8 @@ function useMoveByController() {
 }
 function CanvasContent() {
   useMoveByController();
+
+  useOrbitControls();
   return (
     <>
       <axesHelper args={[5]} />
@@ -54,7 +56,7 @@ function CanvasContent() {
         args={[0xffffff, 0.2]}
         position={new THREE.Vector3(1, 1, 1).normalize()}
       />
-      <OrbitControls makeDefault />
+      {/* <OrbitControls makeDefault /> */}
       <Suspense fallback={<LoadingSpinner />}>
         <LoadVRM url="./models/three-vrm-girl.vrm" />
       </Suspense>

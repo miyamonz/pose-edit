@@ -266,6 +266,7 @@ class OrbitControls extends EventDispatcher {
     // なので、特にupdate()を呼び出す必要はない
     // ただし、他と同様にdampingなどの実装をすれば当然update()を呼び出す必要があるだろう
 
+    // これちがうわ、dolly以外もちぇっくしとるわ
     const changed = this.dolly.checkZoomed(this.object);
     if (changed) {
       this.dispatchEvent(changeEvent);
