@@ -5,7 +5,7 @@ import { MouseHandle } from "./MouseHandle";
 import { Pan, Damping } from "./Pan";
 import { TouchHandle } from "./TouchHandle";
 import { KeyboardHandle } from "./KeyboardHandle";
-import { SphericalState } from "./SphericalState";
+import { SphericalDamping, SphericalState } from "./SphericalState";
 import { SaveState } from "./SaveState";
 import { PointerState } from "./PointerState";
 
@@ -255,7 +255,12 @@ class OrbitControls extends EventDispatcher {
     //dolly
     this.sphericalState.spherical.radius *= this.dolly.getNextFrameScale();
 
-    this.sphericalState.updateObjectTransform(this.object, this.target);
+    // this.sphericalState.update();
+    this.sphericalDamping.update(
+      this.sphericalState.spherical,
+      this.sphericalState.sphericalDelta
+    );
+    this.sphericalState.applyObjectTransform(this.object, this.target);
 
     // dollyはOrbitControlsにおいては、cameraのzoomを変更することを意味する
     // なので、特にupdate()を呼び出す必要はない
@@ -275,6 +280,7 @@ class OrbitControls extends EventDispatcher {
   pan: Pan;
   panDamping = new Damping(0.05);
   sphericalState: SphericalState;
+  sphericalDamping = new SphericalDamping(0.05);
 
   constructor(object: Camera, domElement?: HTMLElement) {
     super();
@@ -297,7 +303,7 @@ class OrbitControls extends EventDispatcher {
       const upAngle = height ? (2 * Math.PI * y) / height : 0;
       return [leftAngle, upAngle] as const;
     };
-    const rotate = new Rotate(sphericalState, mapper);
+    const rotate = new Rotate(sphericalState.sphericalDelta, mapper);
 
     const pan = new Pan({
       object,

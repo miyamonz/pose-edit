@@ -1,8 +1,7 @@
-import { Vector2 } from "three";
-import { SphericalState } from "./SphericalState";
+import { Spherical, Vector2 } from "three";
 
 export class Rotate {
-  sphericalState: SphericalState;
+  sphericalDelta: Spherical;
 
   rotateSpeed = 1.0;
   private rotateStart = new Vector2();
@@ -15,21 +14,21 @@ export class Rotate {
   ) => readonly [leftAngle: number, upAngle: number];
 
   constructor(
-    sphericalState: SphericalState,
+    delta: Spherical,
     vectorMapper?: (
       x: number,
       y: number
     ) => readonly [leftAngle: number, upAngle: number]
   ) {
-    this.sphericalState = sphericalState;
+    this.sphericalDelta = delta;
     this.vectorMapper = vectorMapper ?? ((x, y) => [x, y]);
   }
 
   private rotateLeft(angle: number): void {
-    this.sphericalState.sphericalDelta.theta -= angle;
+    this.sphericalDelta.theta -= angle;
   }
   private rotateUp(angle: number): void {
-    this.sphericalState.sphericalDelta.phi -= angle;
+    this.sphericalDelta.phi -= angle;
   }
 
   // If auto-rotate is enabled, you must call controls.update() in your animation loop
