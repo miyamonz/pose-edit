@@ -4,29 +4,30 @@ import {
   useFrame,
   useThree,
 } from "@react-three/fiber";
-import * as React from "react";
-import * as THREE from "three";
+
+import { forwardRef, useEffect, useMemo } from "react";
+import type { Camera, Event } from "three";
 import { OrbitControls as OrbitControlsImpl } from "./OrbitControlsImpl";
 
-export type OrbitControlsProps = ReactThreeFiber.Overwrite<
-  ReactThreeFiber.Object3DNode<OrbitControlsImpl, typeof OrbitControlsImpl>,
-  {
-    target?: ReactThreeFiber.Vector3;
-    camera?: THREE.Camera;
-    domElement?: HTMLElement;
-    regress?: boolean;
-    enableDamping?: boolean;
-    makeDefault?: boolean;
-    onChange?: (e?: THREE.Event) => void;
-    onStart?: (e?: THREE.Event) => void;
-    onEnd?: (e?: THREE.Event) => void;
-  }
+export type OrbitControlsProps = Omit<
+  ReactThreeFiber.Overwrite<
+    ReactThreeFiber.Object3DNode<OrbitControlsImpl, typeof OrbitControlsImpl>,
+    {
+      camera?: Camera;
+      domElement?: HTMLElement;
+      enableDamping?: boolean;
+      makeDefault?: boolean;
+      onChange?: (e?: Event) => void;
+      onEnd?: (e?: Event) => void;
+      onStart?: (e?: Event) => void;
+      regress?: boolean;
+      target?: ReactThreeFiber.Vector3;
+    }
+  >,
+  "ref"
 >;
 
-export const OrbitControls = React.forwardRef<
-  OrbitControlsImpl,
-  OrbitControlsProps
->(
+export const OrbitControls = forwardRef<OrbitControlsImpl, OrbitControlsProps>(
   (
     {
       makeDefault,
@@ -56,7 +57,7 @@ export const OrbitControls = React.forwardRef<
       (typeof events.connected !== "boolean"
         ? events.connected
         : gl.domElement);
-    const controls = React.useMemo(
+    const controls = useMemo(
       () => new OrbitControlsImpl(explCamera),
       [explCamera]
     );
@@ -65,8 +66,8 @@ export const OrbitControls = React.forwardRef<
       if (controls.enabled) controls.update();
     });
 
-    React.useEffect(() => {
-      const callback = (e: THREE.Event) => {
+    useEffect(() => {
+      const callback = (e: Event) => {
         invalidate();
         if (regress) performance.regress();
         if (onChange) onChange(e);
@@ -94,7 +95,7 @@ export const OrbitControls = React.forwardRef<
       invalidate,
     ]);
 
-    React.useEffect(() => {
+    useEffect(() => {
       if (makeDefault) {
         const old = get().controls;
         set({ controls });
